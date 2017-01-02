@@ -4592,7 +4592,7 @@
   {
     "input": "/",
     "base": "file:///C:/a/b",
-    "href": "file:///",
+    "href": "file:///C:/",
     "protocol": "file:",
     "username": "",
     "password": "",
@@ -4606,7 +4606,7 @@
   {
     "input": "//d:",
     "base": "file:///C:/a/b",
-    "href": "file://d:/",
+    "href": "file:///d:",
     "protocol": "file:",
     "username": "",
     "password": "",
@@ -4620,7 +4620,7 @@
   {
     "input": "//d:/..",
     "base": "file:///C:/a/b",
-    "href": "file://d:/",
+    "href": "file:///d:/",
     "protocol": "file:",
     "username": "",
     "password": "",
