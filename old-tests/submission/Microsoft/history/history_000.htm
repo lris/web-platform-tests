@@ -5,6 +5,14 @@
         <link rel="author" title="Microsoft" href="http://www.microsoft.com/" />
         <link rel="help" href="http://dev.w3.org/html5/spec/history.html" />
         <title>HTML5 History Test Cases</title>
+		<script>
+
+            window.start_callback = window.opener.start_callback;
+            window.test_start_callback = window.opener.test_start_callback;
+            window.result_callback = window.opener.result_callback;
+            window.completion_callback = window.opener.completion_callback;
+
+		</script>
         <script src="/resources/testharness.js"></script>
         <script src="/resources/testharnessreport.js"></script>
     </head>
@@ -20,15 +28,19 @@
         var testIndex = 0;
         var testframe1 = document.getElementById("testframe1");
         var testframe2 = document.getElementById("testframe2");
-        
-        if (false && !window.opener) {
-            window.open(location);
-        } else {
-            //setup = window.opener.setup;
-            //add_result_callback = window.opener.add_result_callback;
-            //test = window.opener.test;
-            //async_test = window.opener.async_test;
-            //done = window.opener.done;
+		opener.add_completion_callback = add_completion_callback;
+        add_completion_callback(function() {
+          window.close();
+        });
+        var properties = {explicit_done:true, timeout:8000};
+
+        if (window.opener) {
+            Object.defineProperty(properties, "output_document", {
+                value: opener.document,
+                enumerable: false
+            });
+        }
+
         setup(function()
         {
             testCollection = [
@@ -302,7 +314,7 @@
                     });
                 },
             ];
-        }, {explicit_done:true, timeout:8000});
+        }, properties);
         
         //used to get the name of a page within a path
         //  to check correctness of url parameter
@@ -322,9 +334,6 @@
             } else {
                 //when the last test has run, explicitly end test suite
                 done();
-                if (window.opener) {
-                    window.close();
-                }
             }
         }
         function queue(func) {
@@ -335,7 +344,6 @@
         add_result_callback(testFinished);
         //start the first test manually
         queue(testCollection[testIndex]);
-     }
      </script>
 </body>
 </html>
