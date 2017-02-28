@@ -92,7 +92,7 @@ promise_test(function(t) {
 promise_test(function(t) {
     var url = 'resources/empty-worker.js';
     var scope = 'resources/blank.html?ready-installing';
-   
+
     return service_worker_unregister(t, scope)
       .then(function() {
           return with_iframe(scope);
@@ -128,7 +128,7 @@ promise_test(function(t) {
     var url = 'resources/empty-worker.js';
     var scope = 'resources/register-iframe.html';
     var expected_url = normalizeURL(url);
-   
+
     return with_iframe(scope)
       .then(function(f) {
           return f.contentWindow.navigator.serviceWorker.ready;

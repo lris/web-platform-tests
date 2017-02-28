@@ -25,7 +25,7 @@ function install_appcache() {
   return new Promise(function(resolve, reject) {
       var frame = document.createElement('iframe');
       frame.src = INSTALL_APPCACHE_URL;
-      document.body.appendChild(frame);      
+      document.body.appendChild(frame);
       resolve_install_appcache = function() {
           document.body.removeChild(frame);
           resolve();
@@ -69,10 +69,10 @@ async_test(function(t) {
           return service_worker_unregister_and_register(
               t, SERVICE_WORKER_SCRIPT, SERVICE_WORKER_SCOPE);
         })
-      .then(function(r) {  
+      .then(function(r) {
           return wait_for_state(t, r.installing, 'activated');
         })
-      .then(function() {  
+      .then(function() {
           return is_appcached();
         })
       .then(function(result) {

@@ -75,8 +75,8 @@ interface ServiceWorkerRegistration
  method update
  setter onupdatefound
 This is a testharness.js-based test.
-PASS Navigation preload related interfaces in Origin-Trial enabled document. 
-PASS Navigation preload related interfaces in normal SW. 
-PASS Navigation preload related interfaces in Origin-Trial enabled SW. 
+PASS Navigation preload related interfaces in Origin-Trial enabled document.
+PASS Navigation preload related interfaces in normal SW.
+PASS Navigation preload related interfaces in Origin-Trial enabled SW.
 Harness: the test ran to completion.
 

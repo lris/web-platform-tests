@@ -26,7 +26,7 @@ event.preloadResponse resolved with: [object Response]
 Text of preloadResponse: [Service-Worker-Navigation-Preload header set: hello]
 
 This is a testharness.js-based test.
-PASS Calling Navigation preload related methods for normal SW. 
-PASS Calling Navigation preload related methods for Origin-Trial enabled SW. 
+PASS Calling Navigation preload related methods for normal SW.
+PASS Calling Navigation preload related methods for Origin-Trial enabled SW.
 Harness: the test ran to completion.
 

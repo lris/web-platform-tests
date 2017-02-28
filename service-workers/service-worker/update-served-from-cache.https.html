@@ -24,7 +24,7 @@ promise_test(function(t) {
       .then(function() {
           // installing should be null as update() does not trigger install.
           assert_equals(
-              registration.installing, 
+              registration.installing,
               null,
               'installing should be null as the script was served from cache.');
           return service_worker_unregister_and_done(t, scope);

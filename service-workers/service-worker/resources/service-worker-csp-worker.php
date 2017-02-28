@@ -1,4 +1,4 @@
-<?php 
+<?php
 header('Content-Type: application/javascript');
 $directive = $_GET['directive'];
 
