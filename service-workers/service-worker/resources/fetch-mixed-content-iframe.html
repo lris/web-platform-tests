@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<script src="/common/get-host-info.sub.js"></script>
-<script src="test-helpers.sub.js?pipe=sub"></script>
+<script src="../../resources/get-host-info.js?pipe=sub"></script>
+<script src="test-helpers.js"></script>
 <script>
 var params = get_query_params(location.href);
 var SCOPE = 'fetch-mixed-content-iframe-inscope-to-' + params['target'] + '.html';
@@ -29,7 +29,7 @@ navigator.serviceWorker.getRegistration(SCOPE)
     })
   .catch(function(reason) {
       window.parent.postMessage({results: 'FAILURE: ' + reason.message},
-                                host_info['HTTPS_ORIGIN']);
+                                host_info['HTTP_ORIGIN']);
      });
 
 function on_state_change(event) {
@@ -47,11 +47,11 @@ function on_message(e) {
           return registration.unregister();
       })
     .then(function() {
-      window.parent.postMessage(e.data, host_info['HTTPS_ORIGIN']);
+      window.parent.postMessage(e.data, host_info['HTTP_ORIGIN']);
     })
     .catch(function(reason) {
         window.parent.postMessage({results: 'FAILURE: ' + reason.message},
-                                  host_info['HTTPS_ORIGIN']);
+                                  host_info['HTTP_ORIGIN']);
      });
 }
 

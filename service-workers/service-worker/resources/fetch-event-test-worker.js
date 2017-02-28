@@ -11,17 +11,6 @@ function handleReferrer(event) {
     ['Referrer: ' + event.request.referrer])));
 }
 
-function handleReferrerPolicy(event) {
-  event.respondWith(new Response(new Blob(
-    ['ReferrerPolicy: ' + event.request.referrerPolicy])));
-}
-
-function handleReferrerFull(event) {
-  event.respondWith(new Response(new Blob(
-    ['Referrer: ' + event.request.referrer + '\n' +
-     'ReferrerPolicy: ' + event.request.referrerPolicy])));
-}
-
 function handleClientId(event) {
   var body;
   if (event.clientId !== null) {
@@ -80,37 +69,10 @@ function handleUsedCheck(event) {
         'bodyUsed: ' + lastResponseForUsedCheck.bodyUsed));
   }
 }
-function handleFragmentCheck(event) {
-  var body;
-  if (event.request.url.indexOf('#') === -1) {
-    body = 'Fragment Not Found';
-  } else {
-    body = 'Fragment Found :' +
-           event.request.url.substring(event.request.url.indexOf('#'));
-  }
-  event.respondWith(new Response(body));
-}
-function handleCache(event) {
-  event.respondWith(new Response(event.request.cache));
-}
-function handleEventSource(event) {
-  if (event.request.mode === 'navigate') {
-    return;
-  }
-  var data = {
-    mode: event.request.mode,
-    cache: event.request.cache,
-    credentials: event.request.credentials
-  };
-  var body = 'data:' + JSON.stringify(data) + '\n\n';
-  event.respondWith(new Response(body, {
-      headers: { 'Content-Type': 'text/event-stream' }
-    }
-  ));
-}
 
-function handleIntegrity(event) {
-  event.respondWith(new Response(event.request.integrity));
+function handleHeaders(event) {
+  const headers = Array.from(event.request.headers);
+  event.respondWith(new Response(JSON.stringify(headers)));
 }
 
 self.addEventListener('fetch', function(event) {
@@ -118,8 +80,6 @@ self.addEventListener('fetch', function(event) {
     var handlers = [
       { pattern: '?string', fn: handleString },
       { pattern: '?blob', fn: handleBlob },
-      { pattern: '?referrerFull', fn: handleReferrerFull },
-      { pattern: '?referrerPolicy', fn: handleReferrerPolicy },
       { pattern: '?referrer', fn: handleReferrer },
       { pattern: '?clientId', fn: handleClientId },
       { pattern: '?ignore', fn: function() {} },
@@ -128,10 +88,7 @@ self.addEventListener('fetch', function(event) {
       { pattern: '?form-post', fn: handleFormPost },
       { pattern: '?multiple-respond-with', fn: handleMultipleRespondWith },
       { pattern: '?used-check', fn: handleUsedCheck },
-      { pattern: '?fragment-check', fn: handleFragmentCheck },
-      { pattern: '?cache', fn: handleCache },
-      { pattern: '?eventsource', fn: handleEventSource },
-      { pattern: '?integrity', fn: handleIntegrity },
+      { pattern: '?headers', fn: handleHeaders }
     ];
 
     var handler = null;

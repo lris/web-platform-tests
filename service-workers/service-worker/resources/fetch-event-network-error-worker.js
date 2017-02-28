@@ -22,18 +22,15 @@ self.addEventListener('fetch', function(event) {
       event.respondWith(res);
       break;
     case '?unused-fetched-body':
-      event.respondWith(fetch('other.html').then(function(res){
+      event.respondWith(fetch('progressive.php').then(function(res){
           return res;
         }));
       break;
     case '?used-fetched-body':
-      event.respondWith(fetch('other.html').then(function(res){
+      event.respondWith(fetch('progressive.php').then(function(res){
           res.text();
           return res;
         }));
-      break;
-    case '?throw-exception':
-      throw('boom');
       break;
     }
   });

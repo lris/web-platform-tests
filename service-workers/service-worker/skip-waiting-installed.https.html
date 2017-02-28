@@ -1,25 +1,21 @@
 <!DOCTYPE html>
 <title>Service Worker: Skip waiting installed worker</title>
-<script src="/resources/testharness.js"></script>
-<script src="resources/testharness-helpers.js"></script>
-<script src="/resources/testharnessreport.js"></script>
-<script src="resources/test-helpers.sub.js"></script>
+<script src="../resources/testharness.js"></script>
+<script src="../resources/testharnessreport.js"></script>
+<script src="resources/test-helpers.js"></script>
 <script>
 
 promise_test(function(t) {
     var scope = 'resources/blank.html';
     var url1 = 'resources/empty.js';
     var url2 = 'resources/skip-waiting-installed-worker.js';
-    var frame, frame_sw, service_worker, registration, onmessage, oncontrollerchanged;
+    var frame, frame_sw, service_worker, onmessage, oncontrollerchanged;
     var saw_message = new Promise(function(resolve) {
         onmessage = function(e) {
             var message = e.data;
             assert_equals(
                 message, 'PASS',
-                'skipWaiting promise should be resolved with undefined');
-
-            assert_equals(registration.active.scriptURL, normalizeURL(url2),
-                          "skipWaiting should make worker become active");
+                'skipWaiting promise should be resolved after activated');
             resolve();
         };
       });
@@ -32,8 +28,8 @@ promise_test(function(t) {
         };
       });
     return service_worker_unregister_and_register(t, url1, scope)
-      .then(function(r) {
-          return wait_for_state(t, r.installing, 'activated');
+      .then(function(registration) {
+          return wait_for_state(t, registration.installing, 'activated');
         })
       .then(function() {
           return with_iframe(scope);
@@ -47,9 +43,8 @@ promise_test(function(t) {
           frame_sw.oncontrollerchange = t.step_func(oncontrollerchanged);
           return navigator.serviceWorker.register(url2, {scope: scope});
         })
-      .then(function(r) {
-          registration = r;
-          service_worker = r.installing;
+      .then(function(registration) {
+          service_worker = registration.installing;
           return wait_for_state(t, service_worker, 'installed');
         })
       .then(function() {

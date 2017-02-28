@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <title>Service Worker: Interfaces</title>
-<script src="/resources/testharness.js"></script>
-<script src="/resources/testharnessreport.js"></script>
+<script src="../resources/testharness.js"></script>
+<script src="../resources/testharnessreport.js"></script>
 <script src="resources/interfaces.js"></script>
-<script src="resources/test-helpers.sub.js"></script>
+<script src="resources/test-helpers.js"></script>
 <script>
 
 test(function() {
@@ -13,7 +13,8 @@ test(function() {
       {
         register: 'function',
         getRegistration: 'function',
-        oncontrollerchange: EVENT_HANDLER
+        oncontrollerchange: EVENT_HANDLER,
+        onmessage: EVENT_HANDLER
       });
   }, 'Interfaces and attributes of ServiceWorkerContainer');
 
@@ -50,7 +51,7 @@ async_test(function(t) {
   }, 'Interfaces and attributes of ServiceWorker');
 
 service_worker_test(
-  'resources/interfaces-worker.sub.js',
+  'resources/interfaces-worker.js',
   'Interfaces and attributes in ServiceWorkerGlobalScope');
 
 </script>

@@ -1,8 +1,7 @@
 <!DOCTYPE html>
-<script src="/resources/testharness.js"></script>
-<script src="/resources/testharnessreport.js"></script>
-<script src="resources/test-helpers.sub.js"></script>
-<body>
+<script src="../resources/testharness.js"></script>
+<script src="../resources/testharnessreport.js"></script>
+<script src="resources/test-helpers.js"></script>
 <script>
 var worker_url = 'resources/empty-worker.js';
 
@@ -41,12 +40,11 @@ async_test(function(t) {
         registration = r;
         return wait_for_state(t, r.installing, 'activated');
       })
-    .then(function() { return with_iframe('resources/404.py'); })
+    .then(function() { return with_iframe('out-of-scope'); })
     .then(function(f) {
         frame = f;
         return frame.contentWindow.navigator.serviceWorker.register(
-            'empty-worker.js',
-            { scope: 'scope/subsequent-register-from-different-iframe' });
+            worker_url, { scope: scope });
       })
     .then(function(new_registration) {
         assert_not_equals(
@@ -71,7 +69,7 @@ async_test(function(t) {
 
         assert_not_equals(
           registration.active, new_registration.active,
-          'registration should have the different active worker');
+          'registration should have a different active worker');
         assert_equals(
           registration.active.scriptURL,
           new_registration.active.scriptURL,
@@ -92,11 +90,12 @@ async_test(function(t) {
 
 async_test(function(t) {
   var scope = 'resources/scope/concurrent-register';
+  var number_of_registrations = 10;
 
   service_worker_unregister(t, scope)
     .then(function() {
         var promises = [];
-        for (var i = 0; i < 10; ++i) {
+        for (var i = 0; i < number_of_registrations; ++i) {
           promises.push(navigator.serviceWorker.register(worker_url,
                                                          { scope: scope }));
         }
@@ -114,4 +113,3 @@ async_test(function(t) {
 }, 'Concurrent registrations resolve to the same registration object');
 
 </script>
-</body>

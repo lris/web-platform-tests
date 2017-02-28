@@ -1,16 +1,13 @@
 <!DOCTYPE html>
 <title>Service Worker: Controller on reload</title>
-<script src="/resources/testharness.js"></script>
-<script src="/resources/testharnessreport.js"></script>
-<script src="resources/test-helpers.sub.js"></script>
+<script src="../resources/testharness.js"></script>
+<script src="../resources/testharnessreport.js"></script>
+<script src="resources/test-helpers.js"></script>
 <body>
 <script>
 promise_test(function(t) {
-    const iframe_scope = 'blank.html';
-    const scope = 'resources/' + iframe_scope;
+    var scope = 'resources/blank.html';
     var frame;
-    var registration;
-    var controller;
     return service_worker_unregister(t, scope)
       .then(function() {
           return with_iframe(scope);
@@ -18,10 +15,9 @@ promise_test(function(t) {
       .then(function(f) {
           frame = f;
           return frame.contentWindow.navigator.serviceWorker.register(
-              'empty-worker.js', {scope: iframe_scope});
+              'empty-worker.js', {scope: 'blank.html'});
         })
-      .then(function(swr) {
-          registration = swr;
+      .then(function(registration) {
           return wait_for_state(t, registration.installing, 'activated');
         })
       .then(function() {
@@ -36,17 +32,9 @@ promise_test(function(t) {
         })
       .then(function() {
           var w = frame.contentWindow;
-          controller = w.navigator.serviceWorker.controller;
-          assert_true(controller instanceof w.ServiceWorker,
-                      'controller should be a ServiceWorker object upon reload');
-
-          // objects from separate windows should not be equal
-          assert_not_equals(controller, registration.active);
-
-          return w.navigator.serviceWorker.getRegistration(iframe_scope);
-        })
-      .then(function(frameRegistration) {
-          assert_equals(frameRegistration.active, controller);
+          assert_true(
+              w.navigator.serviceWorker.controller instanceof w.ServiceWorker,
+              'controller should be a ServiceWorker object upon reload');
           frame.remove();
           service_worker_unregister_and_done(t, scope);
         });

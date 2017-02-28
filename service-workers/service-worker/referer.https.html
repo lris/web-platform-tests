@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <title>Service Worker: check referer of fetch()</title>
-<script src="/resources/testharness.js"></script>
-<script src="/resources/testharnessreport.js"></script>
-<script src="/common/get-host-info.sub.js"></script>
-<script src="resources/test-helpers.sub.js?pipe=sub"></script>
+<script src="../resources/testharness.js"></script>
+<script src="../resources/testharnessreport.js"></script>
+<script src="../resources/get-host-info.js?pipe=sub"></script>
+<script src="resources/test-helpers.js"></script>
 <script>
 async_test(function(t) {
     var SCOPE = 'resources/referer-iframe.html';
@@ -22,7 +22,7 @@ async_test(function(t) {
               service_worker_unregister_and_done(t, SCOPE);
             });
           frame.contentWindow.postMessage({},
-                                          host_info['HTTPS_ORIGIN'],
+                                          host_info['HTTP_ORIGIN'],
                                           [channel.port2]);
         })
       .catch(unreached_rejection(t));

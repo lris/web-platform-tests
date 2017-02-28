@@ -12,27 +12,29 @@ function get_query_params(url) {
   return ret;
 }
 
-function get_request_init(base, params) {
+function get_request_init(params) {
   var init = {};
-  init['method'] = params['method'] || base['method'];
-  init['mode'] = params['mode'] || base['mode'];
-  if (init['mode'] == 'navigate') {
-    init['mode'] = 'same-origin';
+  if (params['method']) {
+    init['method'] = params['method'];
   }
-  init['credentials'] = params['credentials'] || base['credentials'];
-  init['redirect'] = params['redirect-mode'] || base['redirect'];
+  if (params['mode']) {
+    init['mode'] = params['mode'];
+  }
+  if (params['credentials']) {
+    init['credentials'] = params['credentials'];
+  }
+  if (params['redirect-mode']) {
+    init['redirect'] = params['redirect-mode'];
+  }
   return init;
 }
 
 self.addEventListener('fetch', function(event) {
     var params = get_query_params(event.request.url);
-    var init = get_request_init(event.request, params);
+    var init = get_request_init(params);
     var url = params['url'];
     if (params['ignore']) {
       return;
-    }
-    if (params['throw']) {
-      throw new Error('boom');
     }
     if (params['reject']) {
       event.respondWith(new Promise(function(resolve, reject) {
@@ -53,29 +55,9 @@ self.addEventListener('fetch', function(event) {
           'gQLABKXJBqMGjBoAAqMGDLwBDAwAEsoCTFWunmQAAAAASUVORK5CYII=');
       var array = new Uint8Array(binary.length);
       for(var i = 0; i < binary.length; i++) {
-        array[i] = binary.charCodeAt(i);
+        array[i] = binary.charCodeAt(i)
       };
       event.respondWith(new Response(new Blob([array], {type: 'image/png'})));
-      return;
-    }
-    if (params['check-ua-header']) {
-      var ua = event.request.headers.get('User-Agent');
-      if (ua) {
-        // We have a user agent!
-        event.respondWith(new Response(new Blob([ua])));
-      } else {
-        // We don't have a user-agent!
-        event.respondWith(new Response(new Blob(["NO_UA"])));
-      }
-      return;
-    }
-    if (params['check-accept-header']) {
-      var accept = event.request.headers.get('Accept');
-      if (accept) {
-        event.respondWith(new Response(accept));
-      } else {
-        event.respondWith(new Response('NO_ACCEPT'));
-      }
       return;
     }
     event.respondWith(new Promise(function(resolve, reject) {
@@ -83,67 +65,6 @@ self.addEventListener('fetch', function(event) {
         if (url) {
           request = new Request(url, init);
         }
-        fetch(request).then(function(response) {
-          var expectedType = params['expected_type'];
-          if (expectedType && response.type !== expectedType) {
-            // Resolve a JSON object with a failure instead of rejecting
-            // in order to distinguish this from a NetworkError, which
-            // may be expected even if the type is correct.
-            resolve(new Response(JSON.stringify({
-              result: 'failure',
-              detail: 'got ' + response.type + ' Response.type instead of ' +
-                      expectedType
-            })));
-          }
-
-          var expectedRedirected = params['expected_redirected'];
-          if (typeof expectedRedirected !== 'undefined') {
-            var expected_redirected = (expectedRedirected === 'true');
-            if(response.redirected !== expected_redirected) {
-              // This is simply determining how to pass an error to the outer
-              // test case(fetch-request-redirect.https.html).
-              var execptedResolves = params['expected_resolves'];
-              if (execptedResolves === 'true') {
-                // Reject a JSON object with a failure since promise is expected
-                // to be resolved.
-                reject(new Response(JSON.stringify({
-                  result: 'failure',
-                  detail: 'got '+ response.redirected +
-                          ' Response.redirected instead of ' +
-                          expectedRedirected
-                })));
-              } else {
-                // Resolve a JSON object with a failure since promise is
-                // expected to be rejected.
-                resolve(new Response(JSON.stringify({
-                  result: 'failure',
-                  detail: 'got '+ response.redirected +
-                          ' Response.redirected instead of ' +
-                          expectedRedirected
-                })));
-              }
-            }
-          }
-
-          if (params['cache']) {
-            var cacheName = "cached-fetches-" + performance.now() + "-" +
-                            event.request.url;
-            var cache;
-            var cachedResponse;
-            return self.caches.open(cacheName).then(function(opened) {
-              cache = opened;
-              return cache.put(request, response);
-            }).then(function() {
-              return cache.match(request);
-            }).then(function(cached) {
-              cachedResponse = cached;
-              return self.caches.delete(cacheName);
-            }).then(function() {
-               resolve(cachedResponse);
-            });
-          } else {
-            resolve(response);
-          }
-        }, reject)
+        fetch(request).then(resolve, reject);
       }));
   });
