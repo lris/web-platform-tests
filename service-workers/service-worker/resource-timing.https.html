@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <script src="/resources/testharness.js"></script>
 <script src="/resources/testharnessreport.js"></script>
-<script src="/common/get-host-info.sub.js"></script>
-<script src="resources/test-helpers.sub.js"></script>
+<script src="../resources/get-host-info.js"></script>
+<script src="resources/test-helpers.js"></script>
 <script>
 function resourceUrl(path) {
     return get_host_info()['HTTP_ORIGIN'] + base_path() + path;
@@ -50,7 +50,7 @@ async_test(function(t) {
 }, 'Controlled resource loads');
 
 test(function() {
-    var url = resourceUrl('resources/test-helpers.sub.js');
+    var url = resourceUrl('resources/test-helpers.js');
     var entry = window.performance.getEntriesByName(url)[0];
     assert_equals(entry.workerStart, 0, 'Non-controlled');
 }, 'Non-controlled resource loads');

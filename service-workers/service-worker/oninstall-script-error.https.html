@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <script src="/resources/testharness.js"></script>
-<script src="resources/testharness-helpers.js"></script>
 <script src="/resources/testharnessreport.js"></script>
-<script src="resources/test-helpers.sub.js"></script>
+<script src="resources/test-helpers.js"></script>
 <script>
 function wait_for_install_event(worker) {
   return new Promise(function(resolve) {
@@ -33,38 +32,33 @@ function make_test(name, script, expect_install) {
   {
     name: 'install handler throws an error',
     script: 'resources/oninstall-throw-error-worker.js',
-    expect_install: true
+    expect_install: false
   },
   {
     name: 'install handler throws an error, error handler does not cancel',
     script: 'resources/oninstall-throw-error-with-empty-onerror-worker.js',
-    expect_install: true
+    expect_install: false
   },
   {
     name: 'install handler dispatches an event that throws an error',
     script: 'resources/oninstall-throw-error-from-nested-event-worker.js',
     expect_install: true
   },
-  {
-    name: 'install handler throws an error in the waitUntil',
-    script: 'resources/oninstall-waituntil-throw-error-worker.js',
-    expect_install: false
-  },
 
   // The following two cases test what happens when the ServiceWorkerGlobalScope
   // 'error' event handler cancels the resulting error event.  Since the
-  // original 'install' event handler through, the installation should still
+  // original 'install' event handler threw, the installation should still
   // be stopped in this case.  See:
   // https://github.com/slightlyoff/ServiceWorker/issues/778
   {
     name: 'install handler throws an error that is cancelled',
     script: 'resources/oninstall-throw-error-then-cancel-worker.js',
-    expect_install: true
+    expect_install: false
   },
   {
     name: 'install handler throws an error and prevents default',
     script: 'resources/oninstall-throw-error-then-prevent-default-worker.js',
-    expect_install: true
+    expect_install: false
   }
 ].forEach(function(test_case) {
     make_test(test_case.name, test_case.script, test_case.expect_install);

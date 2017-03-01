@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<script src="/common/get-host-info.sub.js"></script>
-<script src="test-helpers.sub.js"></script>
+<script src="../../resources/get-host-info.js?pipe=sub"></script>
+<script src="test-helpers.js"></script>
 <script>
 var host_info = get_host_info();
 var SCOPE = 'navigation-redirect-scope1.py';
@@ -30,7 +30,7 @@ var wait_for_worker_promise = navigator.serviceWorker.getRegistration(SCOPE)
 function send_result(message_id, result) {
   window.parent.postMessage(
       {id: message_id, result: result},
-      host_info['HTTPS_ORIGIN']);
+      host_info['HTTP_ORIGIN']);
 }
 
 function get_intercepted_urls(worker) {
@@ -44,7 +44,7 @@ function get_intercepted_urls(worker) {
 window.addEventListener('message', on_message, false);
 
 function on_message(e) {
-  if (e.origin != host_info['HTTPS_ORIGIN']) {
+  if (e.origin != host_info['HTTP_ORIGIN']) {
     console.error('invalid origin: ' + e.origin);
     return;
   }

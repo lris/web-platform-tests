@@ -2,7 +2,7 @@
 <title>ServiceWorkerGlobalScope: unregister</title>
 <script src='/resources/testharness.js'></script>
 <script src='/resources/testharnessreport.js'></script>
-<script src='../resources/test-helpers.sub.js'></script>
+<script src='../resources/test-helpers.js'></script>
 <script>
 
 promise_test(function(t) {
@@ -67,7 +67,7 @@ promise_test(function(t) {
 
 promise_test(function(t) {
     var script = 'resources/unregister-worker.js';
-    var scope = 'resources/unregister-controlling-worker.html';
+    var scope = 'resources/unregister-controlling-worker';
 
     var controller;
     var frame;

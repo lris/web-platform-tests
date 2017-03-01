@@ -1,3 +1,5 @@
+// TODO(horo): Service worker can be killed at some point during the test. So we
+// should use storage API instead of this global variable.
 var requests = [];
 
 self.addEventListener('message', function(event) {

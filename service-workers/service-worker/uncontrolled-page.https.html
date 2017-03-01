@@ -2,7 +2,7 @@
 <title>Service Worker: Registration</title>
 <script src="/resources/testharness.js"></script>
 <script src="/resources/testharnessreport.js"></script>
-<script src="resources/test-helpers.sub.js"></script>
+<script src="resources/test-helpers.js"></script>
 <script>
 function fetch_url(url) {
   return new Promise(function(resolve, reject) {
@@ -26,7 +26,7 @@ async_test(function(t) {
           return wait_for_state(t, reg.installing, 'activated');
         })
       .then(function() {
-          return fetch_url('resources/simple.txt');
+          return fetch_url('/service-workers/resources/simple.txt');
         })
       .then(function(text) {
           assert_equals(text, 'a simple text file\n');

@@ -2,7 +2,7 @@
 <title>Service Worker: Indexed DB</title>
 <script src="/resources/testharness.js"></script>
 <script src="/resources/testharnessreport.js"></script>
-<script src="resources/test-helpers.sub.js"></script>
+<script src="resources/test-helpers.js"></script>
 <script>
 async_test(function(t) {
     var scope = 'resources/blank.html';
@@ -15,7 +15,7 @@ async_test(function(t) {
         sw.postMessage({port: messageChannel.port2}, [messageChannel.port2]);
       })
     .catch(unreached_rejection(t));
-
+    
     function onMessage() {
       var openRequest = indexedDB.open('db');
       openRequest.onsuccess = t.step_func(function() {

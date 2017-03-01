@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <script src="/resources/testharness.js"></script>
-<script src="resources/testharness-helpers.js"></script>
 <script src="/resources/testharnessreport.js"></script>
-<script src="resources/test-helpers.sub.js"></script>
+<script src="resources/test-helpers.js"></script>
 <script>
 function wait_for_install(worker) {
   return new Promise(function(resolve, reject) {
@@ -37,12 +36,6 @@ function make_test(name, script) {
           })
         .then(function() {
             // Activate should succeed regardless of script errors.
-            if (registration.active && registration.active.state == 'activated') {
-              return Promise.resolve();
-            } else if (registration.active) {
-              return wait_for_activate(registration.active);
-            }
-
             return wait_for_activate(registration.waiting);
           });
     }, name);

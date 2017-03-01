@@ -2,17 +2,18 @@
 <title>Service Worker: Navigation redirection</title>
 <script src="/resources/testharness.js"></script>
 <script src="/resources/testharnessreport.js"></script>
-<script src="/common/get-host-info.sub.js"></script>
-<script src="resources/test-helpers.sub.js"></script>
+<script src="../resources/get-host-info.js?pipe=sub"></script>
+<script src="resources/test-helpers.js"></script>
 <body>
 <script>
+
 var host_info = get_host_info();
 
 // This test registers three Service Workers at SCOPE1, SCOPE2 and
 // OTHER_ORIGIN_SCOPE. And checks the redirected page's URL and the requests
 // which are intercepted by Service Worker while loading redirect page.
-var BASE_URL = host_info['HTTPS_ORIGIN'] + base_path();
-var OTHER_BASE_URL = host_info['HTTPS_REMOTE_ORIGIN'] + base_path();
+var BASE_URL = host_info['HTTP_ORIGIN'] + base_path();
+var OTHER_BASE_URL = host_info['HTTP_REMOTE_ORIGIN'] + base_path();
 
 var SCOPE1 = BASE_URL + 'resources/navigation-redirect-scope1.py?';
 var SCOPE2 = BASE_URL + 'resources/navigation-redirect-scope2.py?';
@@ -73,21 +74,18 @@ function get_effective_worker(registration) {
 }
 
 function check_all_intercepted_urls(expected_urls) {
-  var urls = [];
-  return get_intercepted_urls(workers[0])
-    .then(function(url) {
-      urls.push(url);
-      return get_intercepted_urls(workers[1]);
-    }).then(function(url) {
-      urls.push(url);
-      // Gets the request URLs which are intercepted by OTHER_ORIGIN_SCOPE's
-      // SW. This promise will resolve when get_intercepted_urls() in
-      // OTHER_ORIGIN_IFRAME_URL resolves.
-      return send_to_iframe(other_origin_frame, 'get_intercepted_urls');
-    }).then(function(url) {
-      urls.push(url);
-      return urls;
-    }).then(function(urls) {
+  return Promise.all(
+      [
+        // Gets the request URLs which are intercepted by SCOPE1's SW.
+        get_intercepted_urls(workers[0]),
+        // Gets the request URLs which are intercepted by SCOPE2's SW.
+        get_intercepted_urls(workers[1]),
+        // Gets the request URLs which are intercepted by OTHER_ORIGIN_SCOPE's
+        // SW. This promise will resolve when get_intercepted_urls() in
+        // OTHER_ORIGIN_IFRAME_URL resolves.
+        send_to_iframe(other_origin_frame, 'get_intercepted_urls')
+      ])
+    .then(function(urls) {
         assert_object_equals(
             urls, expected_urls,
             'Intercepted URLs should match.');
@@ -116,8 +114,8 @@ function test_redirect(url, expected_last_url,
 window.addEventListener('message', on_message, false);
 
 function on_message(e) {
-  if (e.origin != host_info['HTTPS_REMOTE_ORIGIN'] &&
-      e.origin != host_info['HTTPS_ORIGIN'] ) {
+  if (e.origin != host_info['HTTP_REMOTE_ORIGIN'] &&
+      e.origin != host_info['HTTP_ORIGIN'] ) {
     console.error('invalid origin: ' + e.origin);
     return;
   }
@@ -132,7 +130,7 @@ function send_to_iframe(frame, message) {
       message_resolvers[message_id] = resolve;
       frame.contentWindow.postMessage(
           {id: message_id, message: message},
-          host_info['HTTPS_REMOTE_ORIGIN']);
+          host_info['HTTP_REMOTE_ORIGIN']);
     });
 }
 
@@ -176,7 +174,7 @@ promise_test(function(t) {
         return test_redirect(
             SCOPE1 + 'url=' + encodeURIComponent(SCOPE1),
             SCOPE1,
-            [[SCOPE1 + 'url=' + encodeURIComponent(SCOPE1)], [], []]);
+            [[SCOPE1 + 'url=' + encodeURIComponent(SCOPE1), SCOPE1], [], []]);
       });
   }, 'SW-fallbacked redirect to same-origin same-scope.');
 promise_test(function(t) {
@@ -184,7 +182,7 @@ promise_test(function(t) {
         return test_redirect(
             SCOPE1 + 'url=' + encodeURIComponent(SCOPE2),
             SCOPE2,
-            [[SCOPE1 + 'url=' + encodeURIComponent(SCOPE2)], [], []]);
+            [[SCOPE1 + 'url=' + encodeURIComponent(SCOPE2)], [SCOPE2], []]);
       });
   }, 'SW-fallbacked redirect to same-origin other-scope.');
 promise_test(function(t) {
@@ -204,7 +202,7 @@ promise_test(function(t) {
             OTHER_ORIGIN_SCOPE,
             [[SCOPE1 + 'url=' + encodeURIComponent(OTHER_ORIGIN_SCOPE)],
              [],
-             []]);
+             [OTHER_ORIGIN_SCOPE]]);
       });
   }, 'SW-fallbacked redirect to other-origin in-scope.');
 

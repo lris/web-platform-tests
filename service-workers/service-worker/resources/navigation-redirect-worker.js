@@ -1,23 +1,10 @@
-// We store an empty response for each fetch event request we see
-// in this Cache object so we can get the list of urls in the
-// message event.
-var cacheName = 'urls-' + self.registration.scope;
-
-var waitUntilPromiseList = [];
+// TODO(horo): Service worker can be killed at some point during the test. So we
+// should use storage API instead of this global variable.
+var urls = [];
 
 self.addEventListener('message', function(event) {
-    var urls;
-    event.waitUntil(Promise.all(waitUntilPromiseList).then(function() {
-      waitUntilPromiseList = [];
-      return caches.open(cacheName);
-    }).then(function(cache) {
-      return cache.keys();
-    }).then(function(requestList) {
-      urls = requestList.map(function(request) { return request.url; });
-      return caches.delete(cacheName);
-    }).then(function() {
-      event.data.port.postMessage({urls: urls});
-    }));
+    event.data.port.postMessage({urls: urls});
+    urls = [];
   });
 
 function get_query_params(url) {
@@ -35,41 +22,26 @@ function get_query_params(url) {
 }
 
 self.addEventListener('fetch', function(event) {
-    var waitUntilPromise = caches.open(cacheName).then(function(cache) {
-      return cache.put(event.request, new Response());
-    });
-    event.waitUntil(waitUntilPromise);
-
+    urls.push(event.request.url)
     var params = get_query_params(event.request.url);
-    if (!params['sw']) {
-      // To avoid races, add the waitUntil() promise to our global list.
-      // If we get a message event before we finish here, it will wait
-      // these promises to complete before proceeding to read from the
-      // cache.
-      waitUntilPromiseList.push(waitUntilPromise);
-      return;
+    if (params['sw'] == 'gen') {
+      event.respondWith(Response.redirect(params['url']));
+    } else if (params['sw'] == 'fetch') {
+      event.respondWith(fetch(event.request));
+    } else if (params['sw'] == 'opaque') {
+      event.respondWith(fetch(
+          new Request(event.request.url, {redirect: 'manual'})));
+    } else if (params['sw'] == 'opaqueThroughCache') {
+      var url = event.request.url;
+      var cache;
+      event.respondWith(
+          self.caches.delete(url)
+            .then(function() { return self.caches.open(url); })
+            .then(function(c) {
+                cache = c;
+                return fetch(new Request(url, {redirect: 'manual'}));
+              })
+            .then(function(res) { return cache.put(event.request, res); })
+            .then(function() { return cache.match(url); }));
     }
-
-    event.respondWith(waitUntilPromise.then(function() {
-      if (params['sw'] == 'gen') {
-        return Response.redirect(params['url']);
-      } else if (params['sw'] == 'fetch') {
-        return fetch(event.request);
-      } else if (params['sw'] == 'opaque') {
-        return fetch(new Request(event.request.url, {redirect: 'manual'}));
-      } else if (params['sw'] == 'opaqueThroughCache') {
-        var url = event.request.url;
-        var cache;
-        return caches.delete(url)
-          .then(function() { return self.caches.open(url); })
-          .then(function(c) {
-            cache = c;
-            return fetch(new Request(url, {redirect: 'manual'}));
-          })
-          .then(function(res) { return cache.put(event.request, res); })
-          .then(function() { return cache.match(url); });
-      }
-
-      // unexpected... trigger an interception failure
-    }));
   });

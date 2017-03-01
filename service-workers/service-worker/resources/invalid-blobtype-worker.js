@@ -4,6 +4,7 @@ self.addEventListener('fetch', function(event) {
       return;
     }
     event.respondWith(new Promise(function(resolve) {
+        var headers = new Headers;
         // null byte in blob type
         resolve(new Response(new Blob([],{type: 'a\0b'})));
       }));
