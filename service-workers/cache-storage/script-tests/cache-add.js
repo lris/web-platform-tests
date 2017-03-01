@@ -81,27 +81,7 @@ cache_test(function(cache) {
       .then(function() {
           return cache.add(request);
         });
-  }, 'Cache.add with request with null body (not consumed)');
-
-cache_test(function(cache, test) {
-    return assert_promise_rejects(
-      test,
-      new TypeError(),
-      cache.add('../resources/fetch-status.py?status=206'),
-      'Cache.add should reject on partial response');
-  }, 'Cache.add with 206 response');
-
-cache_test(function(cache, test) {
-    var urls = ['../resources/fetch-status.py?status=206',
-                '../resources/fetch-status.py?status=200'];
-    var requests = urls.map(function(url) {
-        return new Request(url);
-      });
-    return promise_rejects(
-      new TypeError(),
-      cache.addAll(requests),
-      'Cache.addAll should reject with TypeError if any request fails');
-  }, 'Cache.addAll with 206 response');
+  }, 'Cache.add called with Request object with a used body');
 
 cache_test(function(cache, test) {
     return promise_rejects(
@@ -111,7 +91,6 @@ cache_test(function(cache, test) {
       'Cache.add should reject if response is !ok');
   }, 'Cache.add with request that results in a status of 404');
 
-
 cache_test(function(cache, test) {
     return promise_rejects(
       test,
@@ -119,6 +98,23 @@ cache_test(function(cache, test) {
       cache.add('../resources/fetch-status.php?status=500'),
       'Cache.add should reject if response is !ok');
   }, 'Cache.add with request that results in a status of 500');
+
+cache_test(function(cache, test) {
+    return promise_rejects(
+      test,
+      new TypeError(),
+      cache.add('../resources/fetch-status.php?status=206'),
+      'Cache.add should reject on partial response');
+  }, 'Cache.add with request that results in a status of 206');
+
+cache_test(function(cache, test) {
+    return promise_rejects(
+      test,
+      new TypeError(),
+      cache.addAll(['../resources/simple.txt',
+                    '../resources/fetch-status.php?status=206']),
+      'Cache.addAll should reject on partial response');
+  }, 'Cache.addAll with request that results in a status of 206');
 
 cache_test(function(cache, test) {
     return promise_rejects(
@@ -247,13 +243,13 @@ cache_test(function(cache, test) {
           return Promise.all(urls.map(function(url) {
               return cache.match(url);
             }));
-      })
+        })
       .then(function(matches) {
           assert_array_equals(
             matches,
             [undefined, undefined, undefined],
             'If any response fails, no response should be added to cache');
-      });
+        });
   }, 'Cache.addAll with a mix of succeeding and failing requests');
 
 cache_test(function(cache, test) {
