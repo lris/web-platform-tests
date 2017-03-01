@@ -8,10 +8,6 @@ from collections import defaultdict
 
 here = os.path.abspath(os.path.split(__file__)[0])
 
-def get_extra_files(chromium_root):
-    return [(os.path.join(chromium_root, "LayoutTests", "http", "tests", "resources", "testharness-helpers.js"),
-             os.path.join("resources", "testharness-helpers.js"))]
-
 resources_re = re.compile("/?(?:\.\./)*resources/(testharness(?:report)?)\.js")
 
 def resources_path(line, depth):
@@ -95,10 +91,6 @@ def copy_local_files(local_files, out_root, tmp_dir):
         rel_path = os.path.relpath(path, out_root)
         copy(path, tmp_dir, rel_path)
 
-def copy_extra_files(chromium_root, tmp_dir):
-    for in_path, rel_path in get_extra_files(chromium_root):
-        copy(in_path, tmp_dir, rel_path)
-
 def sub_changed_filenames(filename_changes, f):
     rv = []
     for line in f:
@@ -126,7 +118,7 @@ def main():
         sw_path = os.path.join("LayoutTests", "http", "tests", "cachestorage")
         out_root = os.path.abspath(os.path.join(here, "..", "cache-storage"))
     elif "--sw-tests" in sys.argv:
-        sw_path = os.path.join("LayoutTests", "http", "tests", "serviceworkers")
+        sw_path = os.path.join("LayoutTests", "http", "tests", "serviceworker")
         out_root = os.path.abspath(os.path.join(here, "..", "service-worker"))
     else:
         raise ValueError("Must supply either --cache-tests or --sw-tests")
@@ -143,7 +135,6 @@ def main():
         os.mkdir(out_root)
 
     copy_local_files(local_files, out_root, work_path)
-    copy_extra_files(chromium_root, work_path)
 
     path_changes = {}
 
