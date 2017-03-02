@@ -11,7 +11,7 @@
       function statusTest(status) {
         var test = async_test(document.title + " (" + status +")")
         test.step(function() {
-          var source = new EventSource("resources/status-error.py?status=" + status)
+          var source = new EventSource("resources/status-error.py?split_at=" + status + "&status=" + status)
           source.onmessage = function() {
             test.step(function() {
               assert_unreached()
@@ -26,13 +26,16 @@
           }
         })
       }
-      statusTest("204")
-      statusTest("205")
-      statusTest("210")
-      statusTest("299")
-      statusTest("404")
-      statusTest("410")
-      statusTest("503")
+//for (var idx = 65; idx < 75; ++idx) {
+      statusTest(68);
+      statusTest(68);
+//}
+      //statusTest("205")
+      //statusTest("210")
+      //statusTest("299")
+      //statusTest("404")
+      //statusTest("410")
+      //statusTest("503")
     </script>
   </body>
 </html>
