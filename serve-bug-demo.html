@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<body>
+<style>iframe:first-of-type { display: none; }</style>
+<script>
+function make() {
+  var iframe = document.createElement('iframe');
+  iframe.setAttribute('src', '/serve-bug-demo.py');
+  document.body.appendChild(iframe);
+}
+
+// When the browser receives the expected amount of content for this request,
+// it closes the socket and presents the "expected" document.
+//
+// At this time, wptserver's Python handler for the request is still active
+// (but sleeping).
+make();
+
+// When the browser makes another request for the same document, the handler
+// for the previous request writes to this new connection.
+//
+// For this demonstration, the continued response has been constructed as a
+// second valid HTTP response, prompting the browser to render an "unexpected"
+// document. In practice, the "extra bytes" will usually not be so well-formed
+// simply cause a request failure.
+setTimeout(make, 100);
+</script>
+</body>
