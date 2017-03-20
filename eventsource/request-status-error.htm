@@ -15,13 +15,17 @@ function x(done) {
   source.onmessage = function() {
     done();
   };
-  source.onerror = function() {
-    done()
+  source.onerror = function(err) {
+	  console.log(err);
+    done(err);
   };
 }
       function statusTest() {
         var test = async_test(document.title);
-		x(test.step_func(function() {
+		x(test.step_func(function(err) {
+		  if (err) {
+			assert_unreached(err);
+		  }
 		  test.done();
 		}));
 		setTimeout(function() {
