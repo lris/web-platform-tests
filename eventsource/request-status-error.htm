@@ -4,37 +4,33 @@
     <title>EventSource: incorrect HTTP status code</title>
     <script src="/resources/testharness.js"></script>
     <script src="/resources/testharnessreport.js"></script>
-	<script src="/common/utils.js"></script>
   </head>
   <body>
     <div id="log"></div>
     <script>
-var myToken = token();
 function x(done) {
-  var source = new EventSource("resources/status-error.py?token=" + myToken);
-  source.onmessage = function() {
-    done();
-  };
-  source.onerror = function(err) {
-	  console.log(err);
-    done(err);
-  };
+  var s = document.createElement("script");
+  s.onerror = done;
+  s.onload = function() { done(); };
+  s.setAttribute("src", "resources/status-error.py");
+  document.body.appendChild(s);
 }
       function statusTest() {
         var test = async_test(document.title);
 		x(test.step_func(function(err) {
+
+var i = document.createElement('iframe');
+i.setAttribute('src', 'resources/leading-garbage.asis');
+document.body.appendChild(i);
+		  console.log(err);
 		  if (err) {
 			assert_unreached(err);
 		  }
 		  test.done();
 		}));
-		setTimeout(function() {
-			var s = document.createElement('script');
-			new Image().src = 'resources/status-error.py?token=' + myToken + '&foo=1'
-			document.body.appendChild(s);
-		}, 3000);
       }
       statusTest();
+
     </script>
   </body>
 </html>
