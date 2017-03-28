@@ -15,7 +15,7 @@ self.ServiceWorkerRecorder = (function() {
     return new Promise(function(resolve, reject) {
         var request = indexedDB.open(dbName);
         request.onerror = reject;
-        request.onblocked  = function() {
+        request.onblocked = function() {
           reject(new Error('service-worker-recorder.js: database is blocked'));
         };
         request.onupgradeneeded = function(event) {
