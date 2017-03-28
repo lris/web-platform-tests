@@ -3,7 +3,10 @@ def main(request, response):
   headers = [("Content-Type", "text/event-stream")]
 
   # According to RFC7231, HTTP responses bearing status code 204 or 205 must
-  # not specify a body.
+  # not specify a body. The expected browser behavior for this condition is not
+  # currently defined--see the following for further discussion:
+  #
+  # https://github.com/w3c/web-platform-tests/pull/5227
   if status[0] in ["204", "205"]:
       body = ""
   else:
