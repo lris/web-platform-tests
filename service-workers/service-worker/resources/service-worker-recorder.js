@@ -5,6 +5,11 @@ self.ServiceWorkerRecorder = (function() {
   var fileName = location.toString();
   var start = new Date().getTime();
   var ServiceWorkerRecorder = { client: {}, worker: {} };
+  var scope;
+
+  if (typeof registration !== 'undefined') {
+    scope = registration.scope;
+  }
 
   function connect() {
     return new Promise(function(resolve, reject) {
@@ -16,7 +21,9 @@ self.ServiceWorkerRecorder = (function() {
         request.onupgradeneeded = function(event) {
           var db = event.target.result;
           var events = db.createObjectStore(storeName, { autoIncrement: true });
-          events.createIndex('byNameAndTime', ['fileName', 'timeStamp']);
+          events.createIndex(
+            'byNameScopeAndTime', ['fileName', 'scope', 'timeStamp']
+          );
         };
         request.onsuccess = function(event) {
           resolve(event.target.result);
@@ -66,8 +73,10 @@ self.ServiceWorkerRecorder = (function() {
     return connect().then(function(db) {
         var transaction = db.transaction([storeName], 'readwrite');
         var store = transaction.objectStore(storeName)
-        var past = IDBKeyRange.bound([fileName, 0], [fileName, timeStamp]);
-        var get = store.index('byNameAndTime').openKeyCursor(past);
+        var lowerBound = [fileName, scope, 0];
+        var upperBound = [fileName, scope, timeStamp];
+        var past = IDBKeyRange.bound(lowerBound, upperBound);
+        var get = store.index('byNameScopeAndTime').openKeyCursor(past);
         var close = db.close.bind(db, db);
         var del = new Promise(function(resolve, reject) {
             var deleteRequests = [];
@@ -124,6 +133,7 @@ self.ServiceWorkerRecorder = (function() {
             transaction.objectStore(storeName).put({
                 timeStamp: timeStamp,
                 fileName: fileName,
+                scope: scope,
                 value: value
               });
             transaction.onerror = reject;
@@ -156,8 +166,10 @@ self.ServiceWorkerRecorder = (function() {
   ServiceWorkerRecorder.worker.read = function() {
     return connect().then(function(db) {
         var txn = db.transaction([storeName]);
-        var past = IDBKeyRange.bound([fileName, 0], [fileName, Infinity]);
-        var request = txn.objectStore(storeName).index('byNameAndTime')
+        var lowerBound = [fileName, scope, 0];
+        var upperBound = [fileName, scope, Infinity];
+        var past = IDBKeyRange.bound(lowerBound, upperBound);
+        var request = txn.objectStore(storeName).index('byNameScopeAndTime')
           .openCursor(past);
         var close = db.close.bind(db);
         var readAll = new Promise(function(resolve, reject) {
