@@ -1,4 +1,20 @@
 'use strict';
+// ServiceWorkerRecorder.js
+//
+// A set of utility functions for tracking arbitrary events during the lifetime
+// of a Service Worker. Although Service Workers may be written to store state
+// in the global scope and provide it to clients on demand, this practice is
+// volatile because the user agent may terminate workers at any moment. This
+// utility provides persistence across terminations by storing state in an
+// IndexedDB instance.
+//
+// The available methods, their signatures, and their expected usage are
+// defined below. The methods defined in the `ServieWorkerRecorder.worker`
+// namespace are intended for use within Service Worker contexts; the methods
+// defined in the `ServiceWorkerRecorder.client` namespace are intended for use
+// in client contexts. Note that this script must be included in both the
+// Service Worker context and the client's context in order for the provided
+// methods to function as intended.
 self.ServiceWorkerRecorder = (function() {
   var dbName = 'service-worker-recorder.js';
   var storeName = 'events';
