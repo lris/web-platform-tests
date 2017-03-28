@@ -6,5 +6,7 @@ self.addEventListener('fetch', function(event) {
   });
 
 self.addEventListener('fetch', function(event) {
-    ServiceWorkerRecorder.worker.save('second handler invoked');
+    event.waitUntil(
+      ServiceWorkerRecorder.worker.save('second handler invoked')
+    );
   });

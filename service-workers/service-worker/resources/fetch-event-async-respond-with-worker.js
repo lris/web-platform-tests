@@ -1,18 +1,23 @@
 importScripts('./service-worker-recorder.js');
 
 self.addEventListener('fetch', function(event) {
+  var respondLater = new Promise(function(resolve) {
     setTimeout(function() {
         try {
           event.respondWith(new Response());
-          ServiceWorkerRecorder.worker.save('FAIL: did not throw');
+          resolve('FAIL: did not throw');
         } catch (error) {
           if (error.name == 'InvalidStateError') {
-            ServiceWorkerRecorder.worker.save('PASS');
+            resolve('PASS');
           } else {
-            ServiceWorkerRecorder.worker.save(
-              'FAIL: Unexpected exception: ' + error
-            );
+            resolve('FAIL: Unexpected exception: ' + error);
           }
         }
       }, 0);
+    });
+
+    event.waitUntil(respondLater
+      .then(function(result) {
+          return ServiceWorkerRecorder.worker.save(result);
+        }));
   });

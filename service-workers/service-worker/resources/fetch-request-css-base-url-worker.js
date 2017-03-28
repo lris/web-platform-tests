@@ -10,9 +10,9 @@ self.addEventListener('fetch', function(event) {
         'fetch-request-css-base-url-style.css',
         {mode: 'no-cors'}));
     } else if (url.indexOf('dummy.png') != -1) {
-      ServiceWorkerRecorder.worker.save({
+      event.waitUntil(ServiceWorkerRecorder.worker.save({
           url: event.request.url,
           referrer: event.request.referrer
-        });
+        }));
     }
   });
