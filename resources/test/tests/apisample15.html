@@ -2,8 +2,8 @@
 <html>
 <head>
 <title>Example with a shared worker</title>
-<script src="../testharness.js"></script>
-<script src="../testharnessreport.js"></script>
+<script src="../../testharness.js"></script>
+<script src="../../testharnessreport.js"></script>
 </head>
 <body>
 <h1>Shared Web Worker Tests</h1>
@@ -22,5 +22,32 @@ test(
 
 fetch_tests_from_worker(new SharedWorker("apisample-worker.js",
                                          "My shared worker"));
+</script>
+<script type="text/json" id="expected">
+{
+  "status": {
+    "status": 2,
+    "OK": 0,
+    "TIMEOUT": 2,
+    "ERROR": 1,
+    "message": null,
+    "stack": null
+  },
+  "tests": [
+    {
+      "status": 0,
+      "index": 1,
+      "name": "Browser supports SharedWorkers",
+      "properties": {},
+      "TIMEOUT": 2,
+      "PASS": 0,
+      "FAIL": 1,
+      "message": null,
+      "NOTRUN": 3,
+      "stack": null
+    }
+  ],
+  "type": "complete"
+}
 </script>
 </body>
