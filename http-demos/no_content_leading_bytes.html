@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <head>
   <meta charset="utf-8" />
-  <title>Inconsistency in response parsing</title>
+  <title>No-Content response followed by leading bytes in HTTP response</title>
   <script src="/resources/testharness.js"></script>
   <script src="/resources/testharnessreport.js"></script>
 </head>
@@ -13,76 +13,76 @@ function script(src) {
   document.body.appendChild(s);
   return new Promise(function(resolve, reject) {
       s.onload = resolve;
-	  s.onerror = reject;
+      s.onerror = reject;
     });
 }
 promise_test(function(t) {
   return Promise.resolve()
     .then(function() {
-        return script('index.py?seq=1');
+        return script('no_content.py?length=0');
       })
     .then(function() {
-        return script('index.py?seq=2&leading=0');
+        return script('leading_bytes.py?count=0');
       });
-}, 'zero leading characters in second response');
+}, 'zero leading characters');
 
 promise_test(function(t) {
   return Promise.resolve()
     .then(function() {
-        return script('index.py?seq=1');
+        return script('no_content.py?length=0');
       })
     .then(function() {
-        return script('index.py?seq=2&leading=1');
+        return script('leading_bytes.py?count=1');
       });
-}, 'one leading character in second response');
+}, 'one leading character');
 
 promise_test(function(t) {
   return Promise.resolve()
     .then(function() {
-        return script('index.py?seq=1');
+        return script('no_content.py?length=0');
       })
     .then(function() {
-        return script('index.py?seq=2&leading=2');
+        return script('leading_bytes.py?count=2');
       });
-}, 'two leading characters in second response');
+}, 'two leading characters');
 
 promise_test(function(t) {
   return Promise.resolve()
     .then(function() {
-        return script('index.py?seq=1');
+        return script('no_content.py?length=0');
       })
     .then(function() {
-        return script('index.py?seq=2&leading=3');
+        return script('leading_bytes.py?count=3');
       });
-}, 'three leading characters in second response');
+}, 'three leading characters');
 
 promise_test(function(t) {
   return Promise.resolve()
     .then(function() {
-        return script('index.py?seq=1');
+        return script('no_content.py?length=0');
       })
     .then(function() {
-        return script('index.py?seq=2&leading=4');
+        return script('leading_bytes.py?count=4');
       });
-}, 'four leading characters in second response');
+}, 'four leading characters');
 
 promise_test(function(t) {
   return Promise.resolve()
     .then(function() {
-        return script('index.py?seq=1');
+        return script('no_content.py?length=0');
       })
     .then(function() {
-        return script('index.py?seq=2&leading=5');
+        return script('leading_bytes.py?count=5');
       });
-}, 'five leading characters in second response');
+}, 'five leading characters');
 
 promise_test(function(t) {
   return Promise.resolve()
     .then(function() {
-        return script('index.py?seq=1');
+        return script('no_content.py?length=0');
       })
     .then(function() {
-        return script('index.py?seq=2&leading=6');
+        return script('leading_bytes.py?count=6');
       });
-}, 'six leading characters in second response');
+}, 'six leading characters');
 </script>
