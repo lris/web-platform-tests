@@ -1,0 +1,46 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<title>Test#add_cleanup: error</title>
+<script src="../../testharness.js"></script>
+<script src="../../testharnessreport.js"></script>
+</head>
+<body>
+<div id="log"></div>
+
+<script>
+test(function(t) {
+  t.add_cleanup(function() {
+    throw new Error('exception in cleanup method');
+  });
+}, "Exceptions in cleanup cause harness failure.");
+</script>
+<script type="text/json" id="expected">
+{
+  "status": {
+    "status": 1,
+    "OK": 0,
+    "TIMEOUT": 2,
+    "ERROR": 1,
+    "message": "Error: exception in cleanup method",
+    "stack": "(implementation-defined)"
+  },
+  "tests": [
+    {
+      "status": 0,
+      "index": 1,
+      "name": "Exceptions in cleanup cause harness failure.",
+      "properties": {},
+      "TIMEOUT": 2,
+      "PASS": 0,
+      "FAIL": 1,
+      "message": null,
+      "NOTRUN": 3,
+      "stack": null
+    }
+  ],
+  "type": "complete"
+}
+</script>
+</body>
+</html>
