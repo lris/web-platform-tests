@@ -1,0 +1,46 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<title>Test#add_cleanup with Promise-returning functions (timeout handling)</title>
+<script src="../../testharness.js"></script>
+<script src="../../testharnessreport.js"></script>
+</head>
+<body>
+<div id="log"></div>
+
+<script>
+test(function(t) {
+  t.add_cleanup(function() {
+    return new Promise(function() {});
+  });
+}, 'synchronous test with asynchronous cleanup');
+</script>
+<script type="text/json" id="expected">
+{
+  "status": {
+    "ERROR": 1,
+    "OK": 0,
+    "TIMEOUT": 2,
+    "message": null,
+    "stack": null,
+    "status": 2
+  },
+  "tests": [
+    {
+      "FAIL": 1,
+      "NOTRUN": 3,
+      "PASS": 0,
+      "TIMEOUT": 2,
+      "index": "(non-deterministic)",
+      "message": null,
+      "name": "synchronous test with asynchronous cleanup",
+      "properties": {},
+      "stack": null,
+      "status": 0
+    }
+  ],
+  "type": "complete"
+}
+</script>
+</body>
+</html>

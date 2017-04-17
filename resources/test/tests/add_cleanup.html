@@ -64,19 +64,7 @@ async_test(function(t) {
   "tests": [
     {
       "status": 0,
-      "index": 1,
-      "name": "probe synchronous",
-      "properties": {},
-      "TIMEOUT": 2,
-      "PASS": 0,
-      "FAIL": 1,
-      "message": null,
-      "NOTRUN": 3,
-      "stack": null
-    },
-    {
-      "status": 0,
-      "index": 2,
+      "index": "(non-deterministic)",
       "name": "Cleanup methods are invoked exactly once and in the expected sequence.",
       "properties": {},
       "TIMEOUT": 2,
@@ -88,7 +76,7 @@ async_test(function(t) {
     },
     {
       "status": 0,
-      "index": 3,
+      "index": "(non-deterministic)",
       "name": "Cleanup methods are invoked following the completion of asynchronous tests",
       "properties": {},
       "TIMEOUT": 2,
@@ -100,8 +88,20 @@ async_test(function(t) {
     },
     {
       "status": 0,
-      "index": 4,
+      "index": "(non-deterministic)",
       "name": "probe asynchronous",
+      "properties": {},
+      "TIMEOUT": 2,
+      "PASS": 0,
+      "FAIL": 1,
+      "message": null,
+      "NOTRUN": 3,
+      "stack": null
+    },
+    {
+      "status": 0,
+      "index": "(non-deterministic)",
+      "name": "probe synchronous",
       "properties": {},
       "TIMEOUT": 2,
       "PASS": 0,
