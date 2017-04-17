@@ -533,7 +533,8 @@ policies and contribution forms [3].
             });
             Promise.resolve(promise).then(
                     function() {
-                        test.done();
+                        assert_not_equals(promise, undefined);
+                        return test.done();
                     })
                 .catch(test.step_func(
                     function(value) {
@@ -641,10 +642,13 @@ policies and contribution forms [3].
         if (tests.tests.length === 0) {
             tests.set_file_is_test();
         }
+        var op;
         if (tests.file_is_test) {
-            tests.tests[0].done();
+            op = tests.tests[0].done();
+        } else {
+            op = Promise.resolve();
         }
-        tests.end_wait();
+        op.then(function() { tests.end_wait(); });
     }
 
     function generate_tests(func, args, properties) {
@@ -1343,6 +1347,7 @@ policies and contribution forms [3].
         this.steps = [];
 
         this.cleanup_callbacks = [];
+        this._cleaning = null;
 
         tests.push(this);
     }
@@ -1360,7 +1365,8 @@ policies and contribution forms [3].
         INITIAL:0,
         STARTED:1,
         HAS_RESULT:2,
-        COMPLETE:3
+        CLEANING:3,
+        COMPLETE:4
     };
 
     Test.prototype.structured_clone = function()
@@ -1504,26 +1510,70 @@ policies and contribution forms [3].
 
     Test.prototype.done = function()
     {
-        if (this.phase == this.phases.COMPLETE) {
-            return;
+        var this_obj = this;
+        if (this.phase >= this.phases.CLEANING) {
+            return this._cleaning;
         }
 
         if (this.phase <= this.phases.STARTED) {
             this.set_status(this.PASS, null);
         }
 
-        this.phase = this.phases.COMPLETE;
-
         clearTimeout(this.timeout_id);
-        tests.result(this);
-        this.cleanup();
+        this.phase = this.phases.CLEANING;
+        this._cleaning = this.cleanup()
+          .catch(function(reason) {
+              tests.set_status(tests.status.ERROR, reason.message);
+            })
+          .then(function() {
+              this_obj.phase = this_obj.phases.COMPLETE;
+              tests.result(this_obj);
+            });
+
+        return this._cleaning;
     };
 
+    function all_settled(promises) {
+      var rejectionCount = 0;
+      var fixed = map(promises, function(promise) {
+          return promise.catch(function(value) {
+              rejectionCount += 1;
+            });
+        });
+
+      return Promise.all(fixed)
+        .then(function() {
+            if (rejectionCount > 0) {
+              throw rejectionCount;
+            }
+          });
+    }
+
     Test.prototype.cleanup = function() {
-        forEach(this.cleanup_callbacks,
-                function(cleanup_callback) {
-                    cleanup_callback();
-                });
+        var this_obj = this;
+        var promises = map(this.cleanup_callbacks,
+                           function(cleanup_callback) {
+                               return new Promise(function(resolve) {
+                                   resolve(cleanup_callback());
+                                 });
+                           });
+
+        return new Promise(function(resolve, reject) {
+            all_settled(promises).then(resolve, function(rejectionCount) {
+                var totalStr = promises.length + " 'cleanup' function" +
+                  (promises.length !== 1 ? "s" : "");
+                var msg = "Test named '" + this_obj.name + "' specified " +
+                    totalStr + ", and " + rejectionCount + " failed.";
+                reject(new Error(msg));
+              });
+
+            // TODO: Derive value from configuration
+            this_obj.timeout_length = 1000;
+            setTimeout(function() {
+                tests.timeout();
+                resolve();
+              }, this_obj.timeout_length);
+          });
     };
 
     /*
@@ -1550,6 +1600,7 @@ policies and contribution forms [3].
         Object.keys(this).forEach(
                 (function(key) {
                     var value = this[key];
+                    if (key === '_cleaning' ) { return; }
 
                     if (typeof value === "object" && value !== null) {
                         clone[key] = merge({}, value);
@@ -1561,7 +1612,7 @@ policies and contribution forms [3].
         return clone;
     };
 
-    RemoteTest.prototype.cleanup = function() {};
+    RemoteTest.prototype.cleanup = function() { return Promise.resolve(); };
     RemoteTest.prototype.phases = Test.prototype.phases;
     RemoteTest.prototype.update_state_from = function(clone) {
         this.status = clone.status;
@@ -1573,6 +1624,8 @@ policies and contribution forms [3].
     };
     RemoteTest.prototype.done = function() {
         this.phase = this.phases.COMPLETE;
+        this._cleaning = Promise.resolve();
+        return this._cleaning;
     }
 
     /*
@@ -1598,7 +1651,7 @@ policies and contribution forms [3].
         this.message_target = message_target;
         this.message_handler = function(message) {
             var passesFilter = !message_filter || message_filter(message);
-            if (this_obj.running && message.data && passesFilter &&
+            if (message.data && passesFilter &&
                 (message.data.type in this_obj.message_handlers)) {
                 this_obj.message_handlers[message.data.type].call(this_obj, message.data);
             }
@@ -1612,13 +1665,9 @@ policies and contribution forms [3].
         var filename = (error.filename ? " " + error.filename: "");
         // FIXME: Display remote error states separately from main document
         // error state.
-        this.remote_done({
-            status: {
-                status: tests.status.ERROR,
-                message: "Error in remote" + filename + ": " + message,
-                stack: error.stack
-            }
-        });
+        tests.set_status(tests.status.ERROR,
+                         "Error in remote" + filename + ": " + message,
+                         error.stack);
 
         if (error.preventDefault) {
             error.preventDefault();
@@ -1638,21 +1687,23 @@ policies and contribution forms [3].
     RemoteContext.prototype.test_done = function(data) {
         var remote_test = this.tests[data.test.index];
         remote_test.update_state_from(data.test);
-        remote_test.done();
-        tests.result(remote_test);
+        remote_test.done()
+          .then(function() {
+            tests.result(remote_test);
+          });
     };
 
     RemoteContext.prototype.remote_done = function(data) {
         if (tests.status.status === null &&
             data.status.status !== data.status.OK) {
-            tests.status.status = data.status.status;
-            tests.status.message = data.status.message;
-            tests.status.stack = data.status.stack;
+            tests.set_status(data.status.status, data.status.message, data.status.sack);
         }
+
         this.message_target.removeEventListener("message", this.message_handler);
         this.running = false;
         this.remote = null;
         this.message_target = null;
+
         if (tests.all_done()) {
             tests.complete();
         }
@@ -1797,6 +1848,13 @@ policies and contribution forms [3].
         async_test();
     };
 
+    Tests.prototype.set_status = function(status, message, stack)
+    {
+        this.status.status = status;
+        this.status.message = message;
+        this.status.stack = stack ? stack : null;
+    };
+
     Tests.prototype.set_timeout = function() {
         var this_obj = this;
         clearTimeout(this.timeout_id);
@@ -1889,19 +1947,38 @@ policies and contribution forms [3].
         if (this.phase === this.phases.COMPLETE) {
             return;
         }
-        this.phase = this.phases.COMPLETE;
         var this_obj = this;
-        this.tests.forEach(
-            function(x)
+        var promises = map(this.tests,
+            function(test)
             {
-                if (x.phase < x.phases.COMPLETE) {
-                    this_obj.notify_result(x);
-                    x.cleanup();
-                    x.phase = x.phases.COMPLETE;
+                if (test.phase >= test.phases.CLEANING) {
+                    return test._cleaning;
                 }
+
+                test.phase = test.phases.CLEANING;
+                test._cleaning = test.cleanup()
+                  .catch(function(reason) {
+                      this_obj.status.status = this_obj.status.ERROR;
+                      this_obj.status.message = reason.message;
+                    })
+                  .then(function() {
+                      test.phase = test.phases.COMPLETE;
+                      this_obj.notify_result(test);
+                    });
+
+                return test._cleaning;
             }
         );
-        this.notify_complete();
+        function notify() {
+            this_obj.phase = this_obj.phases.COMPLETE;
+            this_obj.notify_complete();
+        }
+        //if (this.status.status === this.status.TIMEOUT) {
+        //    notify();
+        //} else {
+          all_settled(promises)
+            .then(notify, notify);
+        //}
     };
 
     /*
@@ -2773,6 +2850,7 @@ policies and contribution forms [3].
             stack = e.filename + ":" + e.lineno + ":" + e.colno;
         }
 
+        var op = Promise.resolve();
         if (tests.file_is_test) {
             var test = tests.tests[0];
             if (test.phase >= test.phases.HAS_RESULT) {
@@ -2780,13 +2858,11 @@ policies and contribution forms [3].
             }
             test.set_status(test.FAIL, e.message, stack);
             test.phase = test.phases.HAS_RESULT;
-            test.done();
+            op = test.done();
         } else if (!tests.allow_uncaught_exception) {
-            tests.status.status = tests.status.ERROR;
-            tests.status.message = e.message;
-            tests.status.stack = stack;
+            tests.set_status(tests.status.ERROR, e.message, stack);
         }
-        done();
+        op.then(done);
     };
 
     addEventListener("error", error_handler, false);
