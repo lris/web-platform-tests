@@ -641,12 +641,12 @@ policies and contribution forms [3].
         if (tests.tests.length === 0) {
             tests.set_file_is_test();
         }
-		var op;
+        var op;
         if (tests.file_is_test) {
             op = tests.tests[0].done();
         } else {
-		    op = Promise.resolve();
-		}
+            op = Promise.resolve();
+        }
         op.then(function() { tests.end_wait(); });
     }
 
@@ -1347,6 +1347,7 @@ policies and contribution forms [3].
         this.steps = [];
 
         this.cleanup_callbacks = [];
+        this._cleaning = null;
 
         tests.push(this);
     }
@@ -1516,12 +1517,13 @@ policies and contribution forms [3].
         }
 
         clearTimeout(this.timeout_id);
-        this_obj.phase = this_obj.phases.COMPLETE;
+        this.phase = this.phases.COMPLETE;
         this._cleaning = this.cleanup()
           .then(function() {
               tests.result(this_obj);
             });
-		return this._cleaning;
+
+        return this._cleaning;
     };
 
     function all_settled(promises) {
@@ -1612,7 +1614,7 @@ policies and contribution forms [3].
     };
     RemoteTest.prototype.done = function() {
         this.phase = this.phases.COMPLETE;
-		return Promise.resolve();
+        return Promise.resolve();
     }
 
     /*
@@ -1679,9 +1681,9 @@ policies and contribution forms [3].
         var remote_test = this.tests[data.test.index];
         remote_test.update_state_from(data.test);
         remote_test.done()
-		  .then(function() {
+          .then(function() {
             tests.result(remote_test);
-		  });
+          });
     };
 
     RemoteContext.prototype.remote_done = function(data) {
@@ -2827,7 +2829,7 @@ policies and contribution forms [3].
             stack = e.filename + ":" + e.lineno + ":" + e.colno;
         }
 
-		var op = Promise.resolve();
+        var op = Promise.resolve();
         if (tests.file_is_test) {
             var test = tests.tests[0];
             if (test.phase >= test.phases.HAS_RESULT) {
