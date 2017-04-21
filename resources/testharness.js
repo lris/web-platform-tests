@@ -1365,7 +1365,8 @@ policies and contribution forms [3].
         INITIAL:0,
         STARTED:1,
         HAS_RESULT:2,
-        COMPLETE:3
+        CLEANING:3,
+        COMPLETE:4
     };
 
     Test.prototype.structured_clone = function()
@@ -1508,7 +1509,7 @@ policies and contribution forms [3].
     Test.prototype.done = function()
     {
         var this_obj = this;
-        if (this.phase == this.phases.COMPLETE) {
+        if (this.phase >= this.phases.CLEANING) {
             return this._cleaning;
         }
 
@@ -1517,9 +1518,14 @@ policies and contribution forms [3].
         }
 
         clearTimeout(this.timeout_id);
-        this.phase = this.phases.COMPLETE;
+        this.phase = this.phases.CLEANING;
         this._cleaning = this.cleanup()
+          .catch(function(reason) {
+              tests.status.status = tests.status.ERROR;
+              tests.status.message = reason.message;
+            })
           .then(function() {
+              this_obj.phase = this_obj.phases.COMPLETE;
               tests.result(this_obj);
             });
 
@@ -1527,24 +1533,18 @@ policies and contribution forms [3].
     };
 
     function all_settled(promises) {
-      var resolutions = {
-        fulfillments: [],
-        rejections: []
-      };
+      var rejectionCount = 0;
       var fixed = map(promises, function(promise) {
-          return promise.then(function(value) {
-              resolutions.fulfillments.push(value);
-            }, function(value) {
-              resolutions.rejections.push(value);
+          return promise.catch(function(value) {
+              rejectionCount += 1;
             });
         });
 
       return Promise.all(fixed)
         .then(function() {
-            if (resolutions.rejections.length) {
-              throw resolutions;
+            if (rejectionCount > 0) {
+              throw rejectionCount;
             }
-            return resolutions;
           });
     }
 
@@ -1556,17 +1556,22 @@ policies and contribution forms [3].
                                    resolve(cleanup_callback());
                                  });
                            });
-        return all_settled(promises)
-            .catch(function(resolutions) {
-                var msg = "Test named '" + this_obj.name + "' specified a " +
-                    "'cleanup' function which failed.";
-                return new Promise(function(resolve) {
-                    setTimeout(function() {
-                        resolve();
-                        throw new Error(msg);
-                      }, 0);
-                  });
+
+        return new Promise(function(resolve, reject) {
+            all_settled(promises).then(resolve, function(rejectionCount) {
+                var totalStr = promises.length + " promise" +
+                  (promises.length !== 1 ? "s" : "");
+                var msg = "Test named '" + this_obj.name + "' specified " +
+                    totalStr + ", and " + rejectionCount + " failed.";
+                reject(new Error(msg));
               });
+
+            //setTimeout(function() {
+            //    var msg = "Test named '" + this_obj.name + "' specified a " +
+            //        "'cleanup' function which timed out.";
+            //    reject(new Error(msg));
+            //  }, this_obj.timeout_length);
+          });
     };
 
     /*
@@ -1614,7 +1619,8 @@ policies and contribution forms [3].
     };
     RemoteTest.prototype.done = function() {
         this.phase = this.phases.COMPLETE;
-        return Promise.resolve();
+        this._cleaning = Promise.resolve();
+        return this._cleaning;
     }
 
     /*
@@ -1936,28 +1942,36 @@ policies and contribution forms [3].
         }
         var this_obj = this;
         var promises = map(this.tests,
-            function(x)
+            function(test)
             {
-                if (x.phase < x.phases.COMPLETE) {
-                    return x.cleanup()
-                      .then(function() {
-                          this_obj.notify_result(x);
-                          x.phase = x.phases.COMPLETE;
-                        });
+                if (test.phase >= test.phases.CLEANING) {
+                    return test._cleaning;
                 }
-                return Promise.resolve();
+
+                test.phase = test.phases.CLEANING;
+                test._cleaning = test.cleanup()
+                  .catch(function(reason) {
+                      this_obj.status.status = this_obj.status.ERROR;
+                      this_obj.status.message = reason.message;
+                    })
+                  .then(function() {
+                      test.phase = test.phases.COMPLETE;
+                      this_obj.notify_result(test);
+                    });
+
+                return test._cleaning;
             }
         );
         function notify() {
             this_obj.phase = this_obj.phases.COMPLETE;
             this_obj.notify_complete();
         }
-        if (this.status.status === this.status.TIMEOUT) {
-            notify();
-        } else {
-            all_settled(promises)
-              .then(notify, notify);
-        }
+        //if (this.status.status === this.status.TIMEOUT) {
+        //    notify();
+        //} else {
+          all_settled(promises)
+            .then(notify, notify);
+        //}
     };
 
     /*
