@@ -1508,7 +1508,7 @@ policies and contribution forms [3].
     {
         var this_obj = this;
         if (this.phase == this.phases.COMPLETE) {
-            return Promise.resolve();
+            return this._cleaning;
         }
 
         if (this.phase <= this.phases.STARTED) {
@@ -1516,11 +1516,12 @@ policies and contribution forms [3].
         }
 
         clearTimeout(this.timeout_id);
-        return this.cleanup()
+        this_obj.phase = this_obj.phases.COMPLETE;
+        this._cleaning = this.cleanup()
           .then(function() {
-              this_obj.phase = this_obj.phases.COMPLETE;
               tests.result(this_obj);
             });
+		return this._cleaning;
     };
 
     function all_settled(promises) {
@@ -1690,10 +1691,10 @@ policies and contribution forms [3].
             tests.status.message = data.status.message;
             tests.status.stack = data.status.stack;
         }
-        this.running = false;
 
         if (tests.all_done()) {
             this.message_target.removeEventListener("message", this.message_handler);
+            this.running = false;
             this.remote = null;
             this.message_target = null;
             tests.complete();
