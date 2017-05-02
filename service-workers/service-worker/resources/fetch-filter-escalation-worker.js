@@ -3,5 +3,5 @@ self.addEventListener('fetch', function(event) {
       return;
     }
 
-    event.respondWith(fetch('fetch-access-control.py'));
+	event.respondWith(new Response('', { headers: { 'x-service-worker': '1' } }));
   });
