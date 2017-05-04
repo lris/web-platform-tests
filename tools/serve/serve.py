@@ -138,6 +138,53 @@ fetch_tests_from_worker(new Worker("%(path)s"));
 """
 
 
+class ServiceWorkersHandler(HtmlWrapperHandler):
+    path_replace = [(".any.worker.html", ".any.js", ".any.worker.js"),
+                    (".service-worker.https.html", ".service-worker.js")]
+    wrapper = """<!doctype html>
+<meta charset=utf-8>
+%(meta)s
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<div id=log></div>
+<script>
+setup({ explicit_done: true });
+(function() {
+    var registration;
+    var scope = location.href;
+    navigator.serviceWorker.getRegistration(scope)
+      .then(function(registration) {
+          if (registration) {
+            return registration.unregister();
+          }
+        })
+      .then(function(result) {
+          return navigator.serviceWorker.register("%(path)s", { scope: scope });
+        })
+      .then(function(r) {
+          registration = r;
+
+          if (!registration.installing) {
+            test(function() {
+                throw new Error("No 'installing' worker available.");
+              }, "Test precondition: 'installing' worker");
+            return;
+          }
+
+          return new Promise(function(resolve) {
+              fetch_tests_from_worker(registration.installing, resolve);
+            });
+        })
+      .catch(function() {})
+      .then(function() {
+          return registration.unregister();
+        })
+      .then(done);
+  })();
+</script>
+"""
+
+
 class WindowHandler(HtmlWrapperHandler):
     path_replace = [(".window.html", ".window.js")]
     wrapper = """<!doctype html>
@@ -235,6 +282,7 @@ class RoutesBuilder(object):
         routes = [
             ("GET", "*.worker.html", WorkersHandler),
             ("GET", "*.window.html", WindowHandler),
+            ("GET", "*.service-worker.https.html", ServiceWorkersHandler),
             ("GET", "*.any.html", AnyHtmlHandler),
             ("GET", "*.any.worker.js", AnyWorkerHandler),
             ("GET", "*.asis", handlers.AsIsHandler),

@@ -425,21 +425,27 @@ policies and contribution forms [3].
                             // back to the main window.
                             this_obj._add_message_port(event.source);
                         }
+
+                        // Discourage worker termination from occurring during
+                        // test execution.
+                        event.waitUntil(new Promise(add_completion_callback));
+
+                        // Wait to signal load completion until after a message
+                        // channel has been established with the client. This:
+                        //
+                        // - avoids a race condition where the tests complete
+                        //   prior to the creation of a connection to the
+                        //   client
+                        // - ensures that the test results are received even if
+                        //   the lifecycle is interrupted by arbitrary
+                        //   terminations between initial evaluation and
+                        //   receipt of the "connect" event
+                        this_obj.all_loaded = true;
+                        if (this_obj.on_loaded_callback) {
+                            this_obj.on_loaded_callback();
+                        }
                     }
                 }, false);
-
-        // The oninstall event is received after the service worker script and
-        // all imported scripts have been fetched and executed. It's the
-        // equivalent of an onload event for a document. All tests should have
-        // been added by the time this event is received, thus it's not
-        // necessary to wait until the onactivate event.
-        on_event(self, "install",
-                function(event) {
-                    this_obj.all_loaded = true;
-                    if (this_obj.on_loaded_callback) {
-                        this_obj.on_loaded_callback();
-                    }
-                });
     }
     ServiceWorkerTestEnvironment.prototype = Object.create(WorkerTestEnvironment.prototype);
 
@@ -1582,6 +1588,7 @@ policies and contribution forms [3].
     function RemoteContext(remote, message_target, message_filter) {
         this.running = true;
         this.tests = new Array();
+        this.done_callback = null;
 
         var this_obj = this;
         remote.onerror = function(error) { this_obj.remote_error(error); };
@@ -1648,6 +1655,11 @@ policies and contribution forms [3].
         this.running = false;
         this.remote = null;
         this.message_target = null;
+
+        if (typeof this.done_callback === 'function') {
+            this.done_callback();
+        }
+
         if (tests.all_done()) {
             tests.complete();
         }
@@ -2001,16 +2013,20 @@ policies and contribution forms [3].
         );
     };
 
-    Tests.prototype.fetch_tests_from_worker = function(worker) {
+    Tests.prototype.fetch_tests_from_worker = function(worker, done) {
         if (this.phase >= this.phases.COMPLETE) {
             return;
         }
 
-        this.pending_remotes.push(this.create_remote_worker(worker));
+        var remote = this.create_remote_worker(worker);
+        if (typeof done === 'function') {
+            remote.done_callback = done;
+        }
+        this.pending_remotes.push(remote);
     };
 
-    function fetch_tests_from_worker(port) {
-        tests.fetch_tests_from_worker(port);
+    function fetch_tests_from_worker(port, done) {
+        tests.fetch_tests_from_worker(port, done);
     }
     expose(fetch_tests_from_worker, 'fetch_tests_from_worker');
 
