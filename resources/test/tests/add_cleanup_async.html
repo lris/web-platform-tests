@@ -11,16 +11,23 @@
 <script>
 var resolve1, resolve2;
 var completeCount = 0;
+var firstCount = 0;
+var secondCount = 0;
+
 test(function(t) {
   add_result_callback(function(result_t) {
     if (result_t.name === t.name) {
       completeCount += 1;
     }
   });
+
   t.add_cleanup(function() {
+    firstCount += 1;
     return new Promise(function(_resolve) { resolve1 = _resolve; });
   });
+
   t.add_cleanup(function() {
+    secondCount += 1;
     return new Promise(function(_resolve) { resolve2 = _resolve; });
   });
 }, 'synchronous test with asynchronous cleanup');
@@ -33,6 +40,8 @@ async_test(function(t) {
       assert_equals(
         completeCount, 0, 'test is not asynchronously considered "complete"'
       );
+      assert_equals(firstCount, 1);
+      assert_equals(secondCount, 0, 'cleanup functions are run in series');
 
       resolve1();
 
@@ -43,6 +52,9 @@ async_test(function(t) {
             'test is not considered "complete" following resolution of ' +
             'first promise'
           );
+
+          assert_equals(firstCount, 1);
+          assert_equals(secondCount, 1);
           resolve2();
           t.done();
         }));
