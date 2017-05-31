@@ -51,38 +51,25 @@ async_test(function(t) {
 </script>
 <script type="text/json" id="expected">
 {
-  "status": {
-    "ERROR": 1,
-    "OK": 0,
-    "TIMEOUT": 2,
-    "message": "Error: Test named 'synchronous test with asynchronous cleanup including rejection' specified a 'cleanup' function which failed.",
-    "stack": "(implementation-defined)",
-    "status": 1
+  "summarized_status": {
+    "status_string": "ERROR",
+    "message": "Test named 'synchronous test with asynchronous cleanup including rejection' specified 2 'cleanup' functions, and 1 failed.",
+    "stack": null
   },
-  "tests": [
+  "summarized_tests": [
     {
-      "FAIL": 1,
-      "NOTRUN": 3,
-      "PASS": 0,
-      "TIMEOUT": 2,
-      "index": "(non-deterministic)",
-      "message": null,
+      "status_string": "PASS",
       "name": "synchronous test with asynchronous cleanup including rejection",
-      "properties": {},
       "stack": null,
-      "status": 0
+      "message": null,
+      "properties": {}
     },
     {
-      "FAIL": 1,
-      "NOTRUN": 3,
-      "PASS": 0,
-      "TIMEOUT": 2,
-      "index": "(non-deterministic)",
-      "message": null,
+      "status_string": "PASS",
       "name": "testharness should wait for provided Promises to settle",
-      "properties": {},
       "stack": null,
-      "status": 0
+      "message": null,
+      "properties": {}
     }
   ],
   "type": "complete"

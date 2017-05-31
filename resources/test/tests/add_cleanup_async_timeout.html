@@ -17,26 +17,18 @@ test(function(t) {
 </script>
 <script type="text/json" id="expected">
 {
-  "status": {
-    "ERROR": 1,
-    "OK": 0,
-    "TIMEOUT": 2,
+  "summarized_status": {
+    "status_string": "TIMEOUT",
     "message": null,
-    "stack": null,
-    "status": 2
+    "stack": null
   },
-  "tests": [
+  "summarized_tests": [
     {
-      "FAIL": 1,
-      "NOTRUN": 3,
-      "PASS": 0,
-      "TIMEOUT": 2,
-      "index": "(non-deterministic)",
-      "message": null,
+      "status_string": "PASS",
       "name": "synchronous test with asynchronous cleanup",
-      "properties": {},
       "stack": null,
-      "status": 0
+      "message": null,
+      "properties": {}
     }
   ],
   "type": "complete"

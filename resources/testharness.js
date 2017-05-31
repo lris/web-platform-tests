@@ -20,7 +20,7 @@ policies and contribution forms [3].
     var settings = {
         output:true,
         harness_timeout:{
-            "normal":10000,
+            "normal":1000,
             "long":60000
         },
         test_timeout:null,
@@ -1559,18 +1559,19 @@ policies and contribution forms [3].
 
         return new Promise(function(resolve, reject) {
             all_settled(promises).then(resolve, function(rejectionCount) {
-                var totalStr = promises.length + " promise" +
+                var totalStr = promises.length + " 'cleanup' function" +
                   (promises.length !== 1 ? "s" : "");
                 var msg = "Test named '" + this_obj.name + "' specified " +
                     totalStr + ", and " + rejectionCount + " failed.";
                 reject(new Error(msg));
               });
 
-            //setTimeout(function() {
-            //    var msg = "Test named '" + this_obj.name + "' specified a " +
-            //        "'cleanup' function which timed out.";
-            //    reject(new Error(msg));
-            //  }, this_obj.timeout_length);
+			// TODO: Derive value from configuration
+			this_obj.timeout_length = 1000;
+            setTimeout(function() {
+				tests.timeout();
+				resolve();
+              }, this_obj.timeout_length);
           });
     };
 
