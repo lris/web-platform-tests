@@ -1521,8 +1521,7 @@ policies and contribution forms [3].
         this.phase = this.phases.CLEANING;
         this._cleaning = this.cleanup()
           .catch(function(reason) {
-              tests.status.status = tests.status.ERROR;
-              tests.status.message = reason.message;
+              tests.set_status(tests.status.ERROR, reason.message);
             })
           .then(function() {
               this_obj.phase = this_obj.phases.COMPLETE;
@@ -1566,11 +1565,11 @@ policies and contribution forms [3].
                 reject(new Error(msg));
               });
 
-			// TODO: Derive value from configuration
-			this_obj.timeout_length = 1000;
+            // TODO: Derive value from configuration
+            this_obj.timeout_length = 1000;
             setTimeout(function() {
-				tests.timeout();
-				resolve();
+                tests.timeout();
+                resolve();
               }, this_obj.timeout_length);
           });
     };
@@ -1598,7 +1597,7 @@ policies and contribution forms [3].
         var clone = {};
         Object.keys(this).forEach(
                 (function(key) {
-					if (key === '_cleaning' ) { return; }
+                    if (key === '_cleaning' ) { return; }
                     if (typeof(this[key]) === "object") {
                         clone[key] = merge({}, this[key]);
                     } else {
@@ -1662,13 +1661,9 @@ policies and contribution forms [3].
         var filename = (error.filename ? " " + error.filename: "");
         // FIXME: Display remote error states separately from main document
         // error state.
-        this.remote_done({
-            status: {
-                status: tests.status.ERROR,
-                message: "Error in remote" + filename + ": " + message,
-                stack: error.stack
-            }
-        });
+        tests.set_status(tests.status.ERROR,
+                         "Error in remote" + filename + ": " + message,
+                         error.stack);
 
         if (error.preventDefault) {
             error.preventDefault();
@@ -1697,9 +1692,7 @@ policies and contribution forms [3].
     RemoteContext.prototype.remote_done = function(data) {
         if (tests.status.status === null &&
             data.status.status !== data.status.OK) {
-            tests.status.status = data.status.status;
-            tests.status.message = data.status.message;
-            tests.status.stack = data.status.stack;
+            tests.set_status(data.status.status, data.status.message, data.status.sack);
         }
 
         this.message_target.removeEventListener("message", this.message_handler);
@@ -1850,6 +1843,14 @@ policies and contribution forms [3].
         // Create the test, which will add it to the list of tests
         async_test();
     };
+
+    Tests.prototype.set_status = function(status, message, stack)
+    {
+        this.status.status = status;
+        this.status.message = message;
+        this.status.stack = stack ? stack : null;
+    };
+
 
     Tests.prototype.set_timeout = function() {
         var this_obj = this;
@@ -2856,9 +2857,7 @@ policies and contribution forms [3].
             test.phase = test.phases.HAS_RESULT;
             op = test.done();
         } else if (!tests.allow_uncaught_exception) {
-            tests.status.status = tests.status.ERROR;
-            tests.status.message = e.message;
-            tests.status.stack = stack;
+            tests.set_status(tests.status.ERROR, e.message, stack);
         }
         op.then(done);
     };
