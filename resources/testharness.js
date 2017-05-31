@@ -1598,6 +1598,7 @@ policies and contribution forms [3].
         var clone = {};
         Object.keys(this).forEach(
                 (function(key) {
+					if (key === '_cleaning' ) { return; }
                     if (typeof(this[key]) === "object") {
                         clone[key] = merge({}, this[key]);
                     } else {
@@ -1701,11 +1702,12 @@ policies and contribution forms [3].
             tests.status.stack = data.status.stack;
         }
 
+        this.message_target.removeEventListener("message", this.message_handler);
+        this.running = false;
+        this.remote = null;
+        this.message_target = null;
+
         if (tests.all_done()) {
-            this.message_target.removeEventListener("message", this.message_handler);
-            this.running = false;
-            this.remote = null;
-            this.message_target = null;
             tests.complete();
         }
     };
