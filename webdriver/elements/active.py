@@ -169,7 +169,7 @@ def test_handle_prompt_missing_value(session, create_dialog):
 # >    context's document element.
 # > 4. Let active web element be the JSON Serialization of active element.
 # > 5. Return success with data active web element.
-def test_sucess_document(session):
+def test_success_document(session):
     session.url = inline("""
         <body>
             <h1>Heading</h1>
