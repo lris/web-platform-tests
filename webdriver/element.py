@@ -3,6 +3,7 @@ import pytest
 from support.asserts import assert_error, assert_success, assert_dialog_handled, assert_same_element
 from support.fixtures import create_dialog
 from support.inline import inline
+from webdriver.error import WebDriverException
 
 # > 1. If the current browsing context is no longer open, return error with
 # >    error code no such window.
@@ -89,7 +90,7 @@ def test_using_invalid(session, using, value):
 
 # > [...]
 # > 5. Let selector be the result of getting a property called "value".
-# > 6. If selector is undefined, return error with error code invalid argument. 
+# > 6. If selector is undefined, return error with error code invalid argument.
 def test_value_missing(session):
     result = session.transport.send("POST",
                                     "session/%s/element" % session.session_id,
@@ -103,17 +104,73 @@ def test_value_missing(session):
 
     assert_error(result, "invalid argument")
 
-def find(session, start_node, using, value):
-    """Locate an element according to the heuristic defined by WebDriver's
-    "find" algorithm. Use of this function allows tests to assert the
-    implementation of WebDriver commands without also enforcing conformance
-    with the underlying DOM specification."""
-    pass
+def test_xpath(session):
+    session.url = inline("""
+    textNode
+    <div>
+      textNode
+      <span>First</span>
+    </div>
+    <span>Second</span>
+    """)
+    result = session.transport.send("POST",
+                                    "session/%s/element" % session.session_id,
+                                    {"using":"xpath","value":"//span"})
+    start_node = session.execute_script("return document.documentElement")
 
-def strategy_css_selector(session, start_node, value):
-    return session.execute_script(
-                         "return arguments[0].querySelectorAll(arguments[1]);",
-                         args=[start_node, value])
+    assert_xpath_result(session, start_node, "//span", result)
+
+def test_xpath_invalid_selector_syntax(session):
+    session.url = inline("<span>text</span>")
+    result = session.transport.send("POST",
+                                    "session/%s/element" % session.session_id,
+                                    {"using":"xpath","value":"this is invalid"})
+    start_node = session.execute_script("return document.documentElement")
+
+    assert_xpath_result(session, start_node, "this is invalid", result)
+
+def test_xpath_invalid_selector_text_node(session):
+    session.url = inline("<span>a text node</span>")
+    result = session.transport.send("POST",
+                                    "session/%s/element" % session.session_id,
+                                    {"using":"xpath","value":"//span/text()"})
+    start_node = session.execute_script("return document.documentElement")
+
+    assert_xpath_result(session, start_node, "//span/text()", result)
+
+def assert_xpath_result(session, start_node, value, result):
+    script = """
+    var evaluateResult = document.evaluate(
+      arguments[1], arguments[0], null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+      null);
+    var index = 0;
+    var length = evaluateResult.snapshotLength;
+    var result = [];
+    var node;
+
+    while (index < length) {
+      node = evaluateResult.snapshotItem(index);
+
+      if (!(node instanceof Element)) {
+        throw new Error();
+      }
+
+      result.push(node);
+      index += 1;
+    }
+
+    return result;
+    """
+
+    try:
+        script_result = session.execute_script(script, args=[start_node, value])
+    except WebDriverException:
+        assert_error(result, "invalid selector")
+        return
+
+    assert result.status == 200
+    assert "value" in result.body
+    assert_same_element(session, result.body["value"], script_result[0])
 
 def strategy_link_text(session, start_node, value):
     elements = session.execute_script("return arguments[0].querySelectorAll('a');",
