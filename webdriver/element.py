@@ -1,9 +1,10 @@
 import pytest
 
+from webdriver.error import InvalidSelectorException
+
 from support.asserts import assert_error, assert_success, assert_dialog_handled, assert_same_element
-from support.fixtures import create_dialog
 from support.inline import inline
-from webdriver.error import WebDriverException
+from support.find import find
 
 # > 1. If the current browsing context is no longer open, return error with
 # >    error code no such window.
@@ -104,80 +105,87 @@ def test_value_missing(session):
 
     assert_error(result, "invalid argument")
 
-def test_xpath(session):
+@pytest.mark.parametrize("using,value", [
+    ("css selector", "*"),
+    ("css selector", "span"),
+    ("css selector", ".two"),
+    ("css selector", ".not-found"),
+    ("css selector", "invalid selector >"),
+    ("tag name", "*"),
+    ("tag name", "span"),
+    ("tag name", "div"),
+    ("tag name", "notfound"),
+    #("link text", "an anchor"),
+    #("link text", "not found"),
+    #("partial link text", "an anchor"),
+    #("partial link text", "anchor"),
+    #("partial link text", "not found"),
+    ("xpath", "//*"),
+    ("xpath", "//span"),
+    ("xpath", "//*[contains(@class, 'two')]"),
+    ("xpath", "//not-found"),
+    ("xpath", "invalid selector"),
+    ("xpath", "//span/text()"), # TextNode matched and returned
+    ("xpath", "//span | //span/text()"), # TextNode matched but not returned
+])
+def test_locator(session, using, value):
     session.url = inline("""
-    textNode
-    <div>
-      textNode
-      <span>First</span>
-    </div>
-    <span>Second</span>
+        <span class="two">a span</span>
+        <div class="two">a div</div>
+        <div>another div</div>
+        <a>an anchor</a>
+        <a>another anchor</a>
+        <a>a third anchor</a>
     """)
-    result = session.transport.send("POST",
-                                    "session/%s/element" % session.session_id,
-                                    {"using":"xpath","value":"//span"})
     start_node = session.execute_script("return document.documentElement")
-
-    assert_xpath_result(session, start_node, "//span", result)
-
-def test_xpath_invalid_selector_syntax(session):
-    session.url = inline("<span>text</span>")
-    result = session.transport.send("POST",
+    expected = find(session, start_node, using, value)
+    actual = session.transport.send("POST",
                                     "session/%s/element" % session.session_id,
-                                    {"using":"xpath","value":"this is invalid"})
-    start_node = session.execute_script("return document.documentElement")
+                                    {"using":using,"value":value})
 
-    assert_xpath_result(session, start_node, "this is invalid", result)
+    if isinstance(expected, InvalidSelectorException):
+        assert_error(actual, "invalid selector")
+    elif len(expected) == 0:
+        assert_error(actual, "no such element")
+    else:
+        assert actual.status == 200
+        assert "value" in actual.body
+        assert_same_element(session, actual.body["value"], expected[0])
 
-def test_xpath_invalid_selector_text_node(session):
-    session.url = inline("<span>a text node</span>")
-    result = session.transport.send("POST",
-                                    "session/%s/element" % session.session_id,
-                                    {"using":"xpath","value":"//span/text()"})
-    start_node = session.execute_script("return document.documentElement")
-
-    assert_xpath_result(session, start_node, "//span/text()", result)
-
-def assert_xpath_result(session, start_node, value, result):
-    script = """
-    var evaluateResult = document.evaluate(
-      arguments[1], arguments[0], null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
-      null);
-    var index = 0;
-    var length = evaluateResult.snapshotLength;
-    var result = [];
-    var node;
-
-    while (index < length) {
-      node = evaluateResult.snapshotItem(index);
-
-      if (!(node instanceof Element)) {
-        throw new Error();
-      }
-
-      result.push(node);
-      index += 1;
-    }
-
-    return result;
-    """
-
-    try:
-        script_result = session.execute_script(script, args=[start_node, value])
-    except WebDriverException:
-        assert_error(result, "invalid selector")
-        return
-
-    assert result.status == 200
-    assert "value" in result.body
-    assert_same_element(session, result.body["value"], script_result[0])
-
-def strategy_link_text(session, start_node, value):
-    elements = session.execute_script("return arguments[0].querySelectorAll('a');",
-                             args=[start_node])
-    result = []
-
-    # TODO: Research injecting `bot.js`
-    # https://github.com/SeleniumHQ/selenium/blob/1721e627e3b5ab90a06e82df1b088a33a8d11c20/javascript/atoms/bot.js
-    for element in elements:
-        rendered_text = session.execute_script("")
+#def test_xpath(session):
+#    session.url = inline("""
+#    textNode
+#    <div>
+#      textNode
+#      <span>First</span>
+#    </div>
+#    <span>Second</span>
+#    """)
+#    result = session.transport.send("POST",
+#                                    "session/%s/element" % session.session_id,
+#                                    {"using":"xpath","value":"//span"})
+#    start_node = session.execute_script("return document.documentElement")
+#
+#    assert_xpath_result(session, start_node, "//span", result)
+#
+#def test_xpath_invalid_selector_syntax(session):
+#    session.url = inline("<span>text</span>")
+#    result = session.transport.send("POST",
+#                                    "session/%s/element" % session.session_id,
+#                                    {"using":"xpath","value":"this is invalid"})
+#    start_node = session.execute_script("return document.documentElement")
+#
+#    assert_xpath_result(session, start_node, "this is invalid", result)
+#
+#def test_xpath_invalid_selector_text_node(session):
+#    session.url = inline("<span>a text node</span>")
+#    result = session.transport.send("POST",
+#                                    "session/%s/element" % session.session_id,
+#                                    {"using":"xpath","value":"//span/text()"})
+#    start_node = session.execute_script("return document.documentElement")
+#
+#    assert_xpath_result(session, start_node, "//span/text()", result)
+#
+#    assert result.status == 200
+#    assert "value" in result.body
+#    assert_same_element(session, result.body["value"], script_result[0])
