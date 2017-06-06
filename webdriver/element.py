@@ -1,4 +1,6 @@
 import pytest
+from Queue import Queue
+from threading import Thread
 
 from webdriver.error import InvalidSelectorException
 
@@ -151,6 +153,31 @@ def test_locator(session, using, value):
         assert actual.status == 200
         assert "value" in actual.body
         assert_same_element(session, actual.body["value"], expected[0])
+
+
+# This is broken and probably not a very good idea besides.
+# TODO replace with something intelligent
+def test_locator_wait(new_session):
+    _, session = new_session({"alwaysMatch": {"timeouts": {"implicit": 3000}}})
+    queue = Queue()
+    session.url = inline("")
+
+    def probe(session, queue):
+        result = session.transport.send("POST",
+                                        "session/%s/element" % session.session_id,
+                                        {"using":"css selector","value":"div"})
+
+        queue.put(result)
+
+    Thread(target=probe, args=[session, queue])
+
+    session.execute_script("document.body.appendChild(document.createElement('div'))")
+
+    result = queue.get()
+
+    assert result.status == 200
+    assert "value" in result.body
+    assert_same_element(result.body["value"], expected)
 
 #def test_xpath(session):
 #    session.url = inline("""
