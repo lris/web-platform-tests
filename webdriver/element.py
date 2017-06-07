@@ -1,8 +1,9 @@
 import pytest
 from Queue import Queue
 from threading import Thread
+import time
 
-from webdriver.error import InvalidSelectorException
+from webdriver.error import InvalidSelectorException, WebDriverException
 
 from support.asserts import assert_error, assert_success, assert_dialog_handled, assert_same_element
 from support.inline import inline
@@ -107,28 +108,51 @@ def test_value_missing(session):
 
     assert_error(result, "invalid argument")
 
+# > [...]
+# > 8. Let result be the result of Find with start node, location strategy, and
+# >    selector. 
+#
+# > Find
+# >
+# > [...]
+# > 4. Let elements returned be the result of the relevant element location
+# >    strategy call with arguments start node, and selector.
+# >
+# > [...]
+# >
+# > 7. Let result be an empty JSON List.
+# > 8. For each element in elements returned, append the serialization of
+# >    element to result.
+# > 9. Return result. 
 @pytest.mark.parametrize("using,value", [
+    # > [...]
+    # > 5. If a DOMException, SyntaxError, XPathException, or other error occurs
+    # >    during the execution of the element location strategy, return error
+    # >    invalid selector.
+    ("css selector", "invalid selector >"),
+    ("xpath", "invalid selector"),
+
     ("css selector", "*"),
     ("css selector", "span"),
     ("css selector", ".two"),
-    ("css selector", ".not-found"),
-    ("css selector", "invalid selector >"),
     ("tag name", "*"),
     ("tag name", "span"),
     ("tag name", "div"),
-    ("tag name", "notfound"),
     #("link text", "an anchor"),
-    #("link text", "not found"),
     #("partial link text", "an anchor"),
     #("partial link text", "anchor"),
-    #("partial link text", "not found"),
     ("xpath", "//*"),
     ("xpath", "//span"),
     ("xpath", "//*[contains(@class, 'two')]"),
     ("xpath", "//not-found"),
-    ("xpath", "invalid selector"),
     ("xpath", "//span/text()"), # TextNode matched and returned
     ("xpath", "//span | //span/text()"), # TextNode matched but not returned
+
+
+    ("css selector", ".not-found"),
+    ("tag name", "notfound"),
+    #("link text", "not found"),
+    #("partial link text", "not found"),
 ])
 def test_locator(session, using, value):
     session.url = inline("""
@@ -154,65 +178,71 @@ def test_locator(session, using, value):
         assert "value" in actual.body
         assert_same_element(session, actual.body["value"], expected[0])
 
-
-# This is broken and probably not a very good idea besides.
-# TODO replace with something intelligent
+# > [...]
+# > 8. Let result be the result of Find with start node, location strategy, and
+# >    selector. 
+#
+# > Find
+# >
+# > [...]
+# > 6. If elements returned is empty and the current time is less than end time
+# >    return to step 4. Otherwise, continue to the next step.
+#
+# Note: there is no observable detail that indicates the driver is actively
+#       polling for an element. Because of this, it is not possible to
+#       deterministically verify that polling is taking place. This test
+#       attempts to induce this state by issuing a second "find" command that
+#       is not expected to poll. (Presumably, once processing of this second
+#       command is complete, the first will be in progress.)
+#
+#       Due to the nature of the transport layer and WebDriver's processing
+#       model, this heuristic is not guaranteed to produce the intended effect;
+#       it is possible that the driver has not yet entered the "polling" state
+#       following the delay of the second command. In such cases, the test will
+#       spuriously pass. As a consequence of unavoidable indeterminacy, this is
+#       preferable to intermittent failure.
 def test_locator_wait(new_session):
-    _, session = new_session({"alwaysMatch": {"timeouts": {"implicit": 3000}}})
+    _, session = new_session({"alwaysMatch": {"timeouts": {"implicit": 10000}}})
     queue = Queue()
-    session.url = inline("")
+    anchors = None
 
-    def probe(session, queue):
+    session.url = inline("<a>anchor</a>")
+
+    try:
+        anchors = session.execute_script("return document.getElementsByTagName('a');")
+    except WebDriverException:
+        pass
+
+    if anchors is None or len(anchors) != 1:
+        # WPT disallows skipping tests imperatively, so simply pass the test
+        # if the assertions cannot be executed faithfully.
+        # TODO: Talk with jgraham about relaxing this restriction
+        #pytest.skip("querySelectorAll implementation incomplete")
+        return
+
+    def find_new(session, queue):
         result = session.transport.send("POST",
                                         "session/%s/element" % session.session_id,
-                                        {"using":"css selector","value":"div"})
-
+                                        {"using": "css selector","value": "div"})
         queue.put(result)
 
-    Thread(target=probe, args=[session, queue])
+    Thread(target=find_new, args=[session, queue]).start()
 
-    session.execute_script("document.body.appendChild(document.createElement('div'))")
+    result = session.transport.send("POST",
+                                    "session/%s/element" % session.session_id,
+                                    {"using":"css selector","value": "a"})
+    assert result.status == 200
+    assert "value" in result.body
+    assert_same_element(session, result.body["value"], anchors[0])
+
+    new_div = session.execute_script("""
+        var div = document.createElement('div');
+        document.body.appendChild(div);
+        return div;
+        """)
 
     result = queue.get()
 
     assert result.status == 200
     assert "value" in result.body
-    assert_same_element(result.body["value"], expected)
-
-#def test_xpath(session):
-#    session.url = inline("""
-#    textNode
-#    <div>
-#      textNode
-#      <span>First</span>
-#    </div>
-#    <span>Second</span>
-#    """)
-#    result = session.transport.send("POST",
-#                                    "session/%s/element" % session.session_id,
-#                                    {"using":"xpath","value":"//span"})
-#    start_node = session.execute_script("return document.documentElement")
-#
-#    assert_xpath_result(session, start_node, "//span", result)
-#
-#def test_xpath_invalid_selector_syntax(session):
-#    session.url = inline("<span>text</span>")
-#    result = session.transport.send("POST",
-#                                    "session/%s/element" % session.session_id,
-#                                    {"using":"xpath","value":"this is invalid"})
-#    start_node = session.execute_script("return document.documentElement")
-#
-#    assert_xpath_result(session, start_node, "this is invalid", result)
-#
-#def test_xpath_invalid_selector_text_node(session):
-#    session.url = inline("<span>a text node</span>")
-#    result = session.transport.send("POST",
-#                                    "session/%s/element" % session.session_id,
-#                                    {"using":"xpath","value":"//span/text()"})
-#    start_node = session.execute_script("return document.documentElement")
-#
-#    assert_xpath_result(session, start_node, "//span/text()", result)
-#
-#    assert result.status == 200
-#    assert "value" in result.body
-#    assert_same_element(session, result.body["value"], script_result[0])
+    assert_same_element(session, result.body["value"], new_div)
