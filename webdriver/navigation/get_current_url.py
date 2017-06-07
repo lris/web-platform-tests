@@ -10,10 +10,6 @@ frame_doc = inline("<p>frame")
 one_frame_doc = inline("<iframe src='%s'></iframe>" % frame_doc)
 two_frames_doc = inline("<iframe src='%s'></iframe>" % one_frame_doc)
 
-
-# TODO(ato): 7.1 Get
-
-
 def test_get_current_url_no_browsing_context(session, create_window):
     # 7.2 step 1
     session.window_handle = create_window()
@@ -22,7 +18,6 @@ def test_get_current_url_no_browsing_context(session, create_window):
     result = session.transport.send("GET", "session/%s/url" % session.session_id)
 
     assert_error(result, "no such window")
-
 
 def test_get_current_url_alert_prompt(session):
     # 7.2 step 2
@@ -62,17 +57,6 @@ def test_get_current_url_file_protocol(session):
     result = session.transport.send("GET", "session/%s/url" % session.session_id)
 
     assert_success(result, "file:///")
-
-# TODO(ato): Test for http:// and https:// protocols.
-# We need to expose a fixture for accessing
-# documents served by wptserve in order to test this.
-
-def test_set_malformed_url(session):
-    result = session.transport.send("POST",
-                                    "session/%s/url" % session.session_id,
-                                    {"url": "foo"})
-
-    assert_error(result, "invalid argument")
 
 def test_get_current_url_after_modified_location(session):
     session.execute_script("window.location.href = 'about:blank#wd_test_modification'")
