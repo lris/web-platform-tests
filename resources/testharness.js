@@ -1732,8 +1732,8 @@ policies and contribution forms [3].
             SETUP:1,
             HAVE_TESTS:2,
             HAVE_RESULTS:3,
-            ABORTED:4,
-            COMPLETE:5
+            COMPLETE:4,
+            ABORTED:5
         };
         this.phase = this.phases.INITIAL;
 
