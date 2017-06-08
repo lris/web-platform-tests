@@ -179,3 +179,29 @@ def test_set_malformed_url(session, value):
                                     value)
 
     assert_error(result, "invalid argument")
+
+# > 8. Navigate the current top-level browsing context to url.
+# > [...]
+# > 10. Set the current browsing context to the current top-level browsing
+#       context.
+@pytest.mark.parametrize("initial_suffix, destination_suffix", [
+    ("", "?query"),
+    ("?query", ""),
+    ("?query1", "?query2"),
+    ("", "#fragment"),
+    ("#fragment", ""),
+    ("#fragment1", "#fragment2"),
+    ("", ""),
+])
+def test_from_nested_context(session, create_frame, url, initial_suffix,
+                             destination_suffix):
+    session.url = url("/webdriver/support/blank.html" + initial_suffix)
+
+    session.switch_frame(create_frame())
+    assert session.execute_script("return window !== window.top;")
+
+    result = session.transport.send("POST",
+                                    "session/%s/url" % session.session_id,
+                                    {"url": url(destination_suffix)})
+
+    assert session.execute_script("return window === window.top")
