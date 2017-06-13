@@ -1580,9 +1580,9 @@ policies and contribution forms [3].
             all_settled(promises).then(resolve, function(rejectionCount) {
                 var total = promises.length;
                 tests.status.status = tests.status.ERROR;
-                tests.status.message = "Test named '" + this.name +
+                tests.status.message = "Test named '" + this_obj.name +
                     "' specified " + total + " 'cleanup' function" +
-                    (total > 1 ? "s" : "") + ", and " + error_count + " failed.";
+                    (total > 1 ? "s" : "") + ", and " + rejectionCount + " failed.";
                 tests.status.stack = null;
 
                 resolve();
