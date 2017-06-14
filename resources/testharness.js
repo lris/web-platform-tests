@@ -495,6 +495,11 @@ policies and contribution forms [3].
 
     function test(func, name, properties)
     {
+		promise_test(function(t) {
+          t.step(func, t, t);
+		  return Promise.resolve();
+		}, name, properties);
+		return;
         var test_name = name ? name : test_environment.next_default_test_name();
         properties = properties ? properties : {};
         var test_obj = new Test(test_name, properties);
@@ -521,14 +526,14 @@ policies and contribution forms [3].
     }
 
     function promise_test(func, name, properties) {
-        var test = async_test(name, properties);
         // If there is no promise tests queue make one.
         if (!tests.promise_tests) {
             tests.promise_tests = Promise.resolve();
         }
         tests.promise_tests = tests.promise_tests.then(function() {
+            var test = async_test(name, properties);
             var donePromise = new Promise(function(resolve) {
-                test.add_cleanup(resolve);
+                test._add_cleanup(resolve);
             });
             var promise = test.step(func, test, test);
             test.step(function() {
@@ -619,7 +624,7 @@ policies and contribution forms [3].
             }
         };
 
-        test.add_cleanup(stop_watching);
+        test._add_cleanup(stop_watching);
 
         return this;
     }
@@ -1351,6 +1356,7 @@ policies and contribution forms [3].
         this.steps = [];
 
         this.cleanup_callbacks = [];
+		this._user_cleanup_callback_count = 0;
         this._cleaning = null;
 
         tests.push(this);
@@ -1477,8 +1483,13 @@ policies and contribution forms [3].
         }), timeout * tests.timeout_multiplier);
     }
 
-    Test.prototype.add_cleanup = function(callback) {
+    Test.prototype._add_cleanup = function(callback) {
         this.cleanup_callbacks.push(callback);
+    };
+
+    Test.prototype.add_cleanup = function(callback) {
+		this._user_cleanup_callback_count += 1;
+		this._add_cleanup(callback);
     };
 
     Test.prototype.force_timeout = function() {
@@ -1540,7 +1551,10 @@ policies and contribution forms [3].
     function all_settled(promises) {
       var rejectionCount = 0;
       var fixed = map(promises, function(promise) {
-          return promise.catch(function(value) {
+		  if (!promise || typeof promise.then !== "function") {
+			  return;
+		  }
+          return promise.then(null, function(value) {
               rejectionCount += 1;
             });
         });
@@ -1578,7 +1592,7 @@ policies and contribution forms [3].
 
         return new Promise(function(resolve, reject) {
             all_settled(promises).then(resolve, function(rejectionCount) {
-                var total = promises.length;
+                var total = this_obj._user_cleanup_callback_count;
                 tests.status.status = tests.status.ERROR;
                 tests.status.message = "Test named '" + this_obj.name +
                     "' specified " + total + " 'cleanup' function" +
