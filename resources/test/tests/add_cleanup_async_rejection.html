@@ -24,7 +24,7 @@ test(function(t) {
     return new Promise(function(_resolve) { resolve = _resolve; });
   });
 
-  setTimeout(function() {
+  t.add_cleanup(function() {
 	  if (completeCount === 0) {
 		test(function() {}, "test is not asynchronously considered 'complete'");
 	  }
@@ -42,7 +42,7 @@ test(function(t) {
 
 		  resolve();
 	  }, 0);
-  }, 0);
+  });
 }, "synchronous test with asynchronous cleanup including rejection");
 
 test(function() {}, "synchronously-defined test");

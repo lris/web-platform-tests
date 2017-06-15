@@ -58,12 +58,26 @@ class HTMLItem(pytest.Item, pytest.Collector):
         return pytest.Collector.repr_failure(self, excinfo)
 
     def runtest(self):
+        self._runtest()
+        self._runtest({
+            'message': 'without global Promise constructor',
+            'query_string': 'remove-promise'
+        })
+
+    def _runtest(self, variant = None):
         driver = self.session.config.driver
         server = self.session.config.server
+        harness_url = server.url(HARNESS)
+        test_url = server.url(str(self.filename))
+        message = ''
 
-        driver.get(server.url(HARNESS))
+        if variant is not None:
+            test_url += '?' + variant['query_string']
+            message = variant['message']
 
-        actual = driver.execute_async_script('runTest("%s", "foo", arguments[0])' % server.url(str(self.filename)))
+        driver.get(harness_url)
+
+        actual = driver.execute_async_script('runTest("%s", "foo", arguments[0])' % test_url)
 
         # Test object ordering is not guaranteed. This weak assertion verifies
         # that the indices are unique and sequential
@@ -77,7 +91,7 @@ class HTMLItem(pytest.Item, pytest.Collector):
         summarized[u'summarized_tests'].sort(key=lambda test_obj: test_obj.get('name'))
         summarized[u'type'] = actual['type']
 
-        assert summarized == self.expected
+        assert summarized == self.expected, message
 
     @staticmethod
     def _assert_sequence(nums):

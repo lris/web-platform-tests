@@ -535,7 +535,7 @@ policies and contribution forms [3].
 		schedule(function() {
         test_obj.step(func, test_obj, test_obj);
         if (test_obj.phase === test_obj.phases.STARTED) {
-            return test_obj.done();
+            test_obj.done();
         }
 		});
     }
@@ -1384,7 +1384,8 @@ policies and contribution forms [3].
 
         this.cleanup_callbacks = [];
 		this._user_cleanup_callback_count = 0;
-        this._cleaning = null;
+		this._cleanup_done_callbacks = [];
+        this._done_callbacks = [];
 
         tests.push(this);
     }
@@ -1550,95 +1551,119 @@ policies and contribution forms [3].
         this.done();
     };
 
-    Test.prototype.done = function()
+    Test.prototype.done = function(fn)
     {
         var this_obj = this;
-        if (this.phase >= this.phases.CLEANING) {
-            return this._cleaning;
+        if (this.phase === this.phases.CLEANING) {
+			if (typeof fn === 'function') {
+				this._done_callbacks.push(fn);
+			}
+			return;
         }
+        if (this.phase > this.phases.CLEANING) {
+			setTimeout(fn, 0);
+			return;
+		}
 
         if (this.phase <= this.phases.STARTED) {
             this.set_status(this.PASS, null);
         }
 
         clearTimeout(this.timeout_id);
-        this.phase = this.phases.CLEANING;
-        this._cleaning = this.cleanup()
-          .catch(function(reason) {
-              tests.set_status(tests.status.ERROR, reason.message);
-            })
-          .then(function() {
+        this.cleanup(function() {
               this_obj.phase = this_obj.phases.COMPLETE;
               tests.result(this_obj);
+			  forEach(this_obj._done_callbacks, function(cb) {
+				  try { cb(); } catch(err) {}
+			  });
+			  this_obj._done_callbacks.length = 0;
             });
-
-        return this._cleaning;
     };
-
-    function all_settled(promises) {
-      var rejectionCount = 0;
-      var fixed = map(promises, function(promise) {
-		  if (!promise || typeof promise.then !== "function") {
-			  return;
-		  }
-          return promise.then(null, function(value) {
-              rejectionCount += 1;
-            });
-        });
-
-      return Promise.all(fixed)
-        .then(function() {
-            if (rejectionCount > 0) {
-              throw rejectionCount;
-            }
-          });
-    }
 
     /*
      * Invoke all specified cleanup functions. If one or more produce an error,
      * the context is in an unpredictable state, so all further testing should
      * be cancelled.
      */
-    Test.prototype.cleanup = function() {
+    Test.prototype.cleanup = function(done) {
         var this_obj = this;
-        var promises = map(this.cleanup_callbacks,
-                           function(cleanup_callback) {
-                               var promise = new Promise(function(resolve) {
-                                   resolve(cleanup_callback());
-                                 });
+		var failureCount = 0;
+		var fnDone = function(fn) {
+		  this_obj.cleanup_callbacks.splice(this_obj.cleanup_callbacks.indexOf(fn), 1);
+		  if (this_obj.cleanup_callbacks.length === 0) {
+              this_obj.phase = this_obj.phases.COMPLETE;
+			  report();
+		  }
+		};
+		// Set test phase immediately so that tests
+		// declared within subsequent cleanup functions
+		// are not run.
+		var fnFailed = function(fn) {
+		  tests.phase = tests.phases.ABORTED;
+		  tests.tests.forEach(t => {
+		      t.phase = t.phases.COMPLETE
+		  });
+		  failureCount += 1;
+		  fnDone(fn);
+		};
+		console.log('FOOO');
+		if (this.phase === this.phases.COMPLETE) {
+			setTimeout(done, 0);
+			return;
+		}
+		console.log('barrrr');
+        function invoke(cleanup_callback) {
+		    var result;
+		    var boundFnDone = fnDone.bind(null, cleanup_callback);
+		    var boundFnFailed = fnFailed.bind(null, cleanup_callback);
+			setTimeout(function() {
+		 	try {
+		 	    result = cleanup_callback();
+		 	 } catch(err) {
+		 	    boundFnFailed();
+		 	    return;
+		 	 }
+		 	if (result && typeof result.then === 'function') {
+		 	 result.then(boundFnDone, boundFnFailed);
+		 	} else {
+		 	 boundFnDone();
+		 	}
+			}, 0);
+        }
+        this.phase = this.phases.CLEANING;
+		// TODO: account for "0 cleanup" case
+		if (this.cleanup_callbacks.length === 0) {
+			setTimeout(done, 0);
+			return;
+		}
+        forEach(this.cleanup_callbacks, invoke);
 
-							   // Set test phase immediately so that tests
-							   // declared within subsequent cleanup functions
-							   // are not run.
-							   promise.catch(function() {
-								   tests.phase = tests.phases.ABORTED;
-								   tests.tests.forEach(t => {
-									   t.phase = t.phases.COMPLETE
-								   });
-							     });
+        // TODO: Derive value from configuration
+        this_obj.timeout_length = 1000;
+        setTimeout(function() {
+			if (done === null) {
+				return;
+			}
+            tests.timeout();
+            done();
+			done = null;
+          }, this_obj.timeout_length);
 
-							   return promise;
-                           });
-
-        return new Promise(function(resolve, reject) {
-            all_settled(promises).then(resolve, function(rejectionCount) {
+        function report() {
+			if (done === null) {
+				return;
+			}
+			if (failureCount > 0) {
                 var total = this_obj._user_cleanup_callback_count;
                 tests.status.status = tests.status.ERROR;
                 tests.status.message = "Test named '" + this_obj.name +
                     "' specified " + total + " 'cleanup' function" +
-                    (total > 1 ? "s" : "") + ", and " + rejectionCount + " failed.";
+                    (total > 1 ? "s" : "") + ", and " + failureCount + " failed.";
                 tests.status.stack = null;
-
-                resolve();
-              });
-
-            // TODO: Derive value from configuration
-            this_obj.timeout_length = 1000;
-            setTimeout(function() {
-                tests.timeout();
-                resolve();
-              }, this_obj.timeout_length);
-          });
+			}
+			done();
+			done = null;
+          };
     };
 
     /*
@@ -1665,7 +1690,7 @@ policies and contribution forms [3].
         Object.keys(this).forEach(
                 (function(key) {
                     var value = this[key];
-                    if (key === '_cleaning' ) { return; }
+                    if (key === '_done_callbacks' ) { return; }
 
                     if (typeof value === "object" && value !== null) {
                         clone[key] = merge({}, value);
@@ -1687,10 +1712,9 @@ policies and contribution forms [3].
             this.phase = this.phases.STARTED;
         }
     };
-    RemoteTest.prototype.done = function() {
+    RemoteTest.prototype.done = function(cb) {
         this.phase = this.phases.COMPLETE;
-        this._cleaning = Promise.resolve();
-        return this._cleaning;
+		setTimeout(cb, 0);
     }
 
     /*
@@ -2015,37 +2039,29 @@ policies and contribution forms [3].
             return;
         }
         var this_obj = this;
-        var promises = map(this.tests,
+		var remaining = this.tests.length;
+        forEach(this.tests,
             function(test)
             {
-                if (test.phase >= test.phases.CLEANING) {
-                    return test._cleaning;
-                }
-
-                test.phase = test.phases.CLEANING;
-                test._cleaning = test.cleanup()
-                  .catch(function(reason) {
-                      this_obj.status.status = this_obj.status.ERROR;
-                      this_obj.status.message = reason.message;
-                    })
-                  .then(function() {
-                      test.phase = test.phases.COMPLETE;
+				if (test.phase >= test.phases.CLEANING) {
+					remaining -= 1;
+					  if (remaining === 0) {
+                          this_obj.phase = this_obj.phases.COMPLETE;
+                          this_obj.notify_complete();
+					  }
+					return;
+				}
+                test.done(function() {
                       this_obj.notify_result(test);
-                    });
 
-                return test._cleaning;
+					  remaining -= 1;
+					  if (remaining === 0) {
+                          this_obj.phase = this_obj.phases.COMPLETE;
+                          this_obj.notify_complete();
+					  }
+                    });
             }
         );
-        function notify() {
-            this_obj.phase = this_obj.phases.COMPLETE;
-            this_obj.notify_complete();
-        }
-        //if (this.status.status === this.status.TIMEOUT) {
-        //    notify();
-        //} else {
-          all_settled(promises)
-            .then(notify, notify);
-        //}
     };
 
     /*
