@@ -11,6 +11,10 @@
 <script>
 var resolve1, resolve2;
 var completeCount = 0;
+var counts = {
+	afterTick: null,
+	afterFirst: null
+};
 test(function(t) {
   add_result_callback(function(result_t) {
     if (result_t.name === t.name) {
@@ -23,31 +27,33 @@ test(function(t) {
   t.add_cleanup(function() {
     return new Promise(function(_resolve) { resolve2 = _resolve; });
   });
+
+  setTimeout(function() {
+	  counts.afterTick = completeCount;
+
+	  resolve1();
+
+	  setTimeout(function() {
+	      counts.afterFirst = completeCount;
+
+		  resolve2();
+	  }, 0);
+  }, 0);
 }, 'synchronous test with asynchronous cleanup');
 
-promise_test(function(t) {
+test(function() {
   assert_equals(
-    completeCount, 0, 'test is not immediately considered "complete"'
+	counts.afterTick,
+	0,
+	"test is not asynchronously considered 'complete'"
   );
-  return Promise.resolve().then(function() {
-      assert_equals(
-        completeCount, 0, 'test is not asynchronously considered "complete"'
-      );
-
-      resolve1();
-
-      Promise.resolve().then(function() {
-          assert_equals(
-            completeCount,
-            0,
-            'test is not considered "complete" following resolution of ' +
-            'first promise'
-          );
-          resolve2();
-          t.done();
-        });
-    });
-}, 'testharness should wait for provided Promises to resolve');
+  assert_equals(
+	counts.afterFirst,
+	0,
+	"test is not considered 'complete' following fulfillment of first promise"
+  );
+  assert_equals(completeCount, 1);
+}, "synchronously-defined test");
 </script>
 <script type="text/json" id="expected">
 {
@@ -66,7 +72,7 @@ promise_test(function(t) {
     },
     {
       "status_string": "PASS",
-      "name": "testharness should wait for provided Promises to resolve",
+      "name": "synchronously-defined test",
       "stack": null,
       "message": null,
       "properties": {}

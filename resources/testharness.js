@@ -492,21 +492,52 @@ policies and contribution forms [3].
     /*
      * API functions
      */
+	//var latest = null;
+	//function schedule(fn) {
+    //  if (!latest) {
+	//	result = fn();
+	//	if (result && typeof result.then === "function") {
+	//	  latest = result;
+	//	}
+	//  } else {
+    //    latest = latest.then(fn);
+	//  }
+	//}
+
+	var queue = [];
+	function next() {
+		if (queue.length === 0) {
+			return;
+		}
+		queue.shift()();
+	}
+	function schedule(fn) {
+	  queue.push(function() {
+        setTimeout(function() {
+          var result = fn();
+		  if (result && typeof result.then === 'function') {
+			result.then(next);
+		  } else {
+			next();
+		  }
+		}, 0);
+	  });
+	  if (queue.length === 1) {
+		setTimeout(next, 0);
+	  }
+	}
 
     function test(func, name, properties)
     {
-		promise_test(function(t) {
-          t.step(func, t, t);
-		  return Promise.resolve();
-		}, name, properties);
-		return;
         var test_name = name ? name : test_environment.next_default_test_name();
         properties = properties ? properties : {};
         var test_obj = new Test(test_name, properties);
+		schedule(function() {
         test_obj.step(func, test_obj, test_obj);
         if (test_obj.phase === test_obj.phases.STARTED) {
-            test_obj.done();
+            return test_obj.done();
         }
+		});
     }
 
     function async_test(func, name, properties)
@@ -526,12 +557,8 @@ policies and contribution forms [3].
     }
 
     function promise_test(func, name, properties) {
-        // If there is no promise tests queue make one.
-        if (!tests.promise_tests) {
-            tests.promise_tests = Promise.resolve();
-        }
-        tests.promise_tests = tests.promise_tests.then(function() {
-            var test = async_test(name, properties);
+        var test = async_test(name, properties);
+        schedule(function() {
             var donePromise = new Promise(function(resolve) {
                 test._add_cleanup(resolve);
             });
@@ -1585,6 +1612,9 @@ policies and contribution forms [3].
 							   // are not run.
 							   promise.catch(function() {
 								   tests.phase = tests.phases.ABORTED;
+								   tests.tests.forEach(t => {
+									   t.phase = t.phases.COMPLETE
+								   });
 							     });
 
 							   return promise;
