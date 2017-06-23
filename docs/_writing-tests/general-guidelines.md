@@ -171,6 +171,26 @@ for CSS have some additional requirements for:
 * [Metadata][css-metadata], and
 * [User style sheets][css-user-styles].
 
+## JavaScript-specific Requirements
+
+JavaScript code included in tests should only rely on language features that
+are available in the latest version of all of the following browsers:
+
+- [Mozilla Firefox][mozilla-firefox]
+- [Google Chrome][google-chrome]
+- [Apple Safari][apple-safari]
+- [Microsoft Edge][microsoft-edge]
+
+For test code that is re-used across many tests (e.g. `testharness.js` and the
+JavaScript files in the directory named `common`), language features that were
+introduced in [ECMAScript 2015][es2015] or later should be avoided. This
+practice avoids introducing spanning test failures for consumers maintaining
+older JavaScript runtimes.
+
+Existing tests can be used as a guide to identify acceptable features.
+Additionally, the community-maintained [ECMAScript compatibility
+tables][es-compat] provides an overview of basic feature support across the
+browsers listed above.
 
 [server features]: {{ site.baseurl }}{% link _writing-tests/server-features.md %}
 [assumptions]: {{ site.baseurl }}{% link _writing-tests/assumptions.md %}
@@ -178,3 +198,9 @@ for CSS have some additional requirements for:
 [lint-tool]: {{ site.baseurl }}{% link _writing-tests/lint-tool.md %}
 [css-metadata]: {{ site.baseurl }}{% link _writing-tests/css-metadata.md %}
 [css-user-styles]: {{ site.baseurl }}{% link _writing-tests/css-user-styles.md %}
+[mozilla-firefox]: https://mozilla.org/firefox
+[google-chrome]: https://google.com/chrome/browser/desktop/
+[apple-safari]: https://apple.com/safari
+[microsoft-edge]: http://microsoftedge.com/
+[es2015]: http://www.ecma-international.org/ecma-262/6.0/
+[es-compat]: https://kangax.github.io/compat-table/
