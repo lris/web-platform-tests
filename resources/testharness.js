@@ -1402,7 +1402,7 @@ policies and contribution forms [3].
         }
         this.name = name;
 
-        this.phase = tests.phase === tests.phases.ABORTED ?
+        this.phase = tests.status.status === tests.status.ERROR ?
             this.phases.COMPLETE : this.phases.INITIAL;
 
         this.status = this.NOTRUN;
@@ -1628,16 +1628,15 @@ policies and contribution forms [3].
                     try {
                         cleanup_callback();
                     } catch (e) {
-                        // Set test phase immediately so that tests declared
+                        // Set test status immediately so that tests declared
                         // within subsequent cleanup functions are not run.
-                        tests.phase = tests.phases.ABORTED;
+                        tests.status.status = tests.status.ERROR;
                         error_count += 1;
                     }
                 });
 
         if (error_count > 0) {
             total = this._user_defined_cleanup_count;
-            tests.status.status = tests.status.ERROR;
             tests.status.message = "Test named '" + this.name +
                 "' specified " + total + " 'cleanup' function" +
                 (total > 1 ? "s" : "") + ", and " + error_count + " failed.";
@@ -1826,8 +1825,7 @@ policies and contribution forms [3].
             SETUP:1,
             HAVE_TESTS:2,
             HAVE_RESULTS:3,
-            COMPLETE:4,
-            ABORTED:5
+            COMPLETE:4
         };
         this.phase = this.phases.INITIAL;
 
@@ -1961,7 +1959,7 @@ policies and contribution forms [3].
     };
 
     Tests.prototype.all_done = function() {
-        return this.phase === this.phases.ABORTED ||
+        return this.status.status === this.status.ERROR ||
             (this.tests.length > 0 && test_environment.all_loaded &&
                 this.num_pending === 0 && !this.wait_for_finish &&
                 !this.processing_callbacks &&
