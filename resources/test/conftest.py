@@ -12,6 +12,7 @@ ENC = 'utf8'
 HERE = os.path.dirname(os.path.abspath(__file__))
 WPT_ROOT = os.path.normpath(os.path.join(HERE, '..', '..'))
 HARNESS = os.path.join(HERE, 'harness.html')
+VARIANTS = ['default', 'no-promise']
 
 def pytest_addoption(parser):
     parser.addoption("--binary", action="store", default=None, help="path to browser binary")
@@ -31,6 +32,7 @@ class HTMLItem(pytest.Item, pytest.Collector):
     def __init__(self, filename, parent):
         self.filename = filename
         self.test_type = None
+        self.skipped_variants = []
 
         with io.open(filename, encoding=ENC) as f:
             markup = f.read()
@@ -38,13 +40,25 @@ class HTMLItem(pytest.Item, pytest.Collector):
         parsed = html5lib.parse(markup, namespaceHTMLElements=False)
         name = None
         self.expected = None
+        includes_variants_script = False
 
         for element in parsed.getiterator():
             if not name and element.tag == 'title':
                 name = element.text
                 continue
-            if element.tag == 'meta' and element.attrib.get('name') == 'wpt-test-type':
-                self.test_type = element.attrib.get('content')
+            if element.tag == 'meta':
+                meta_name = element.attrib.get('name')
+                content = element.attrib.get('content')
+
+                if meta_name == 'wpt-test-type':
+                    self.test_type = content
+                elif meta_name == 'wpt-test-skip-variant':
+                    if content not in VARIANTS:
+                        raise ValueError()
+
+                    self.skipped_variants.append(content)
+            if element.tag == 'script' and element.attrib.get('src') == '../variants.js':
+                includes_variants_script = True
             if element.attrib.get('id') == 'expected':
                 self.expected = json.loads(unicode(element.text))
                 continue
@@ -58,6 +72,9 @@ class HTMLItem(pytest.Item, pytest.Collector):
             raise ValueError(
               'Unrecognized "wpt-test-type" ("%s") found in file: %s' % (self.test_type, filename)
             )
+
+        if self.test_type == 'functional' and not includes_variants_script:
+            raise ValueError('No variants script found in file: %s' % filename)
 
         super(HTMLItem, self).__init__(name, parent)
 
@@ -90,12 +107,20 @@ class HTMLItem(pytest.Item, pytest.Collector):
             assert test[u'status_string'] == u'PASS', msg
 
     def _run_functional_test(self):
+        for variant in VARIANTS:
+            if variant in self.skipped_variants:
+                continue
+
+            self._run_functional_test_variant(variant)
+
+    def _run_functional_test_variant(self, variant):
         driver = self.session.config.driver
         server = self.session.config.server
 
         driver.get(server.url(HARNESS))
 
-        actual = driver.execute_async_script('runTest("%s", "foo", arguments[0])' % server.url(str(self.filename)))
+        test_url =server.url(str(self.filename)) + ('?variant=%s' % variant)
+        actual = driver.execute_async_script('runTest("%s", "foo", arguments[0])' % test_url)
 
         # Test object ordering is not guaranteed. This weak assertion verifies
         # that the indices are unique and sequential
